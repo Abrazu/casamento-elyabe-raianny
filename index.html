@@ -678,6 +678,7 @@
       if (!API_URL) return true;
       try {
         const body = JSON.stringify({ aba: sheet, data, modo });
+        console.log('Pacote enviado:', { aba: sheet, data, modo });
         const res  = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
@@ -738,12 +739,12 @@
       }
 
       const envio = {
-        id: Date.now(),
-        nome,
-        whats,
-        status,
-        acompanhantes,
-        dataEnvio: new Date().toLocaleString('pt-BR')
+        ID:            String(Date.now()),
+        Nome:          nome          || '',
+        WhatsApp:      whats         || '',
+        Status:        status        || '',
+        Acompanhantes: acompanhantes.join(', '),
+        DataEnvio:     new Date().toLocaleString('pt-BR')
       };
 
       const btn = document.getElementById('rsvp-submit-btn');
@@ -950,10 +951,36 @@
        PRESENTES — JS
   ════════════════════════════════════════════ -->
   <script>
+    // ── TRANSFORMADORES PRESENTES (interno ↔ API) ───────
+    function presenteParaApi(item) {
+      return {
+        ID:           String(item.id       || ''),
+        Nome:         item.nome            || '',
+        Descricao:    item.descricao       || '',
+        Imagem:       item.imagem          || '',
+        ReservadoPor: item.reservadoPor ? (item.reservadoPor.nome  || '') : '',
+        WhatsReserva: item.reservadoPor ? (item.reservadoPor.whats || '') : '',
+        DataReserva:  item.reservadoPor ? (item.reservadoPor.data  || '') : ''
+      };
+    }
+    function presenteDeApi(raw) {
+      return {
+        id:          raw.ID        || raw.id        || Date.now(),
+        nome:        raw.Nome      || raw.nome      || '',
+        descricao:   raw.Descricao || raw.descricao || '',
+        imagem:      raw.Imagem    || raw.imagem    || '',
+        ativo:       raw.ativo !== false,
+        reservadoPor: raw.ReservadoPor
+          ? { nome: raw.ReservadoPor, whats: raw.WhatsReserva || '', data: raw.DataReserva || '' }
+          : null
+      };
+    }
+
     // ── DATA LAYER ─────────────────────────────────────
     async function carregarCatalogoPub() {
       const dados = await apiGet('Presentes', 'presentes_catalogo', []);
-      return Array.isArray(dados) ? dados.filter(i => i.ativo) : [];
+      const norm  = Array.isArray(dados) ? dados.map(presenteDeApi) : [];
+      return norm.filter(i => i.ativo);
     }
 
     /**
@@ -984,10 +1011,11 @@
     }
 
     async function salvarReservaPub(id, reserva) {
-      const todos = await apiGet('Presentes', 'presentes_catalogo', []);
+      const raw   = await apiGet('Presentes', 'presentes_catalogo', []);
+      const todos = Array.isArray(raw) ? raw.map(presenteDeApi) : [];
       const idx   = todos.findIndex(i => i.id === id);
       if (idx > -1) { todos[idx].reservadoPor = reserva; }
-      await apiPost('Presentes', todos, 'presentes_catalogo');
+      await apiPost('Presentes', todos.map(presenteParaApi), 'presentes_catalogo');
     }
 
     // ── ESTADO ─────────────────────────────────────────

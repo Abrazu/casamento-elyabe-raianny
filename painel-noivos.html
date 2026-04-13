@@ -790,6 +790,7 @@
       if (!API_URL) return true;
       try {
         const body = JSON.stringify({ aba: sheet, data, modo });
+        console.log('Pacote enviado:', { aba: sheet, data, modo });
         const res  = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
@@ -1354,12 +1355,40 @@
     /* ══════════════════════════════════════════════════
        DATA LAYER — Catálogo de Presentes
     ══════════════════════════════════════════════════ */
+
+    // Transformadores interno ↔ API (chaves exatas das colunas da planilha)
+    function presenteParaApi(item) {
+      return {
+        ID:           String(item.id       || ''),
+        Nome:         item.nome            || '',
+        Descricao:    item.descricao       || '',
+        Imagem:       item.imagem          || '',
+        ReservadoPor: item.reservadoPor ? (item.reservadoPor.nome  || '') : '',
+        WhatsReserva: item.reservadoPor ? (item.reservadoPor.whats || '') : '',
+        DataReserva:  item.reservadoPor ? (item.reservadoPor.data  || '') : ''
+      };
+    }
+    function presenteDeApi(raw) {
+      return {
+        id:          raw.ID        || raw.id        || Date.now(),
+        nome:        raw.Nome      || raw.nome      || '',
+        descricao:   raw.Descricao || raw.descricao || '',
+        imagem:      raw.Imagem    || raw.imagem    || '',
+        ativo:       raw.ativo !== false,
+        reservadoPor: raw.ReservadoPor
+          ? { nome: raw.ReservadoPor, whats: raw.WhatsReserva || '', data: raw.DataReserva || '' }
+          : null
+      };
+    }
+
     async function db_lerCatalogo() {
-      return await apiGet('Presentes', 'presentes_catalogo', null);
+      const raw = await apiGet('Presentes', 'presentes_catalogo', null);
+      if (!Array.isArray(raw)) return raw;
+      return raw.map(presenteDeApi);
     }
 
     async function db_salvarCatalogo(dados) {
-      await apiPost('Presentes', dados, 'presentes_catalogo');
+      await apiPost('Presentes', dados.map(presenteParaApi), 'presentes_catalogo');
     }
 
     /* ── CATÁLOGO ─────────────────────────────────────── */
@@ -1681,23 +1710,22 @@
       inbox.classList.remove('hidden');
 
       lista.innerHTML = pendentes.map((r, i) => {
-        const acompTxt = r.acompanhantes && r.acompanhantes.length
-          ? r.acompanhantes.join(', ')
-          : 'Nenhum';
-        const badgeCls = r.status === 'Confirmado' ? 'badge-confirmado' : 'badge-recusado';
+        const acompArr = (r.Acompanhantes || '').split(', ').filter(Boolean);
+        const acompTxt = acompArr.length ? acompArr.join(', ') : 'Nenhum';
+        const badgeCls = r.Status === 'Confirmado' ? 'badge-confirmado' : 'badge-recusado';
         return `
           <div class="bg-white border border-rosa2/40 rounded-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3">
             <div class="flex-1 flex flex-col gap-1">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-medium text-sm text-vinho">${r.nome}</span>
-                <span class="px-2 py-0.5 text-xs rounded-full font-medium ${badgeCls}">${r.status}</span>
+                <span class="font-medium text-sm text-vinho">${r.Nome}</span>
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium ${badgeCls}">${r.Status}</span>
               </div>
-              ${r.whats ? `<span class="text-xs text-vinho/50">📱 ${r.whats}</span>` : ''}
+              ${r.WhatsApp ? `<span class="text-xs text-vinho/50">📱 ${r.WhatsApp}</span>` : ''}
               <span class="text-xs text-vinho/50">
                 Acompanhantes: <span class="text-vinho/70">${acompTxt}</span>
-                ${r.acompanhantes && r.acompanhantes.length ? `(+${r.acompanhantes.length})` : ''}
+                ${acompArr.length ? `(+${acompArr.length})` : ''}
               </span>
-              <span class="text-xs text-vinho/30">${r.dataEnvio}</span>
+              <span class="text-xs text-vinho/30">${r.DataEnvio}</span>
             </div>
             <div class="flex gap-2 shrink-0">
               <button onclick="importarRSVP(${i})"
@@ -1718,11 +1746,11 @@
       const r = pendentes[i];
 
       // Adiciona o convidado principal
-      convidados.push({ nome: r.nome, whats: r.whats || '', acomp: r.acompanhantes.join(', '), status: r.status });
+      convidados.push({ nome: r.Nome, whats: r.WhatsApp || '', acomp: r.Acompanhantes || '', status: r.Status });
 
       // Adiciona cada acompanhante como convidado separado
-      (r.acompanhantes || []).forEach(nome => {
-        convidados.push({ nome, whats: '', acomp: '', status: r.status });
+      (r.Acompanhantes || '').split(', ').filter(Boolean).forEach(nome => {
+        convidados.push({ nome, whats: '', acomp: '', status: r.Status });
       });
 
       salvar('convidados', convidados);
