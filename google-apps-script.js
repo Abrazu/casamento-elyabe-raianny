@@ -165,13 +165,20 @@ function doGet(e) {
  */
 function doPost(e) {
   try {
-    const rawPayload = e.parameter.payload;
-    if (!rawPayload) {
-      return resposta_('Parâmetro "payload" ausente no corpo da requisição.', true);
+    // Lê o body: text/plain vem em e.postData.contents,
+    // form-urlencoded vem em e.parameter.payload (fallback)
+    var rawBody = '';
+    if (e.postData && e.postData.contents) {
+      rawBody = e.postData.contents;
+    } else if (e.parameter && e.parameter.payload) {
+      rawBody = e.parameter.payload;
+    }
+    if (!rawBody) {
+      return resposta_('Corpo da requisição vazio.', true);
     }
 
-    const parsed = JSON.parse(rawPayload);
-    const nome   = (parsed.sheet || '').trim();
+    const parsed = JSON.parse(rawBody);
+    const nome   = (parsed.sheet || parsed.aba || '').trim();
     const data   = parsed.data;
     const modo   = parsed.modo || 'replace';
 
