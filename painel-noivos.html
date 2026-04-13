@@ -600,6 +600,15 @@
               </div>
             </div>
           </div>
+          <!-- Resetar cores padrão -->
+          <div class="mt-4 pt-4 border-t border-rosa2/30 flex items-center justify-between gap-4 flex-wrap">
+            <p class="text-xs text-vinho/40 italic">Padrão: Marsala #8E3B46 · Rosa #F5D0D8</p>
+            <button onclick="resetarCoresPadrao(this)"
+                    class="px-4 py-2 border border-rosa2 text-vinho/60 text-xs tracking-widest uppercase
+                           hover:border-marsala hover:text-marsala active:scale-95 transition-all rounded-sm">
+              ↺ Resetar Cores Padrão
+            </button>
+          </div>
         </div>
 
         <!-- Acesso -->
@@ -762,7 +771,7 @@
         return raw ? JSON.parse(raw) : padrao;
       }
       try {
-        const res  = await fetch(API_URL + '?aba=' + encodeURIComponent(sheet));
+        const res  = await fetch(API_URL + '?sheet=' + encodeURIComponent(sheet));
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         const json = JSON.parse(text);
@@ -789,8 +798,9 @@
       }
       if (!API_URL) return true;
       try {
-        const body = JSON.stringify({ aba: sheet, data, modo });
-        console.log('Pacote enviado:', { aba: sheet, data, modo });
+        const payload = { sheet: sheet, data: data, modo: modo };
+        const body = JSON.stringify(payload);
+        console.log('Enviando para o Google:', payload);
         const res  = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
@@ -1832,6 +1842,35 @@
       await apiPost('Configuracoes', cfg, 'configuracoes_site');
       btn.textContent = 'Salvo ✓';
       setTimeout(function() { btn.textContent = 'Salvar Configurações'; btn.disabled = false; }, 2000);
+    }
+
+    async function resetarCoresPadrao(btn) {
+      var COR_MARSALA_PADRAO = '#8E3B46';
+      var COR_ROSA_PADRAO    = '#F5D0D8';
+
+      // Atualiza os inputs visuais imediatamente
+      document.getElementById('cfg-cor-marsala').value = COR_MARSALA_PADRAO;
+      document.getElementById('cfg-cor-rosa').value    = COR_ROSA_PADRAO;
+
+      // Lê config existente do localStorage, atualiza APENAS as cores
+      var cfg = {};
+      try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch(e) {}
+      cfg.corMarsala = COR_MARSALA_PADRAO;
+      cfg.corRosa    = COR_ROSA_PADRAO;
+
+      // Feedback visual (spinner)
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-spinner"></span>Resetando…';
+
+      // Persiste no localStorage + envia para Google Sheets
+      await apiPost('Configuracoes', cfg, 'configuracoes_site');
+
+      // Feedback de sucesso
+      btn.textContent = 'Cores Resetadas ✓';
+      setTimeout(function() {
+        btn.textContent = '↺ Resetar Cores Padrão';
+        btn.disabled = false;
+      }, 2000);
     }
 
     /* ── NOSSA HISTÓRIA ───────────────────────────────── */

@@ -650,7 +650,7 @@
         return raw ? JSON.parse(raw) : padrao;
       }
       try {
-        const res  = await fetch(API_URL + '?aba=' + encodeURIComponent(sheet));
+        const res  = await fetch(API_URL + '?sheet=' + encodeURIComponent(sheet));
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         const json = JSON.parse(text);
@@ -677,8 +677,9 @@
       }
       if (!API_URL) return true;
       try {
-        const body = JSON.stringify({ aba: sheet, data, modo });
-        console.log('Pacote enviado:', { aba: sheet, data, modo });
+        const payload = { sheet: sheet, data: data, modo: modo };
+        const body = JSON.stringify(payload);
+        console.log('Enviando para o Google:', payload);
         const res  = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
