@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel dos Noivos — E & R</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            marsala:  '#8E3B46',
+            marsala2: '#6E2D37',
+            rosa:     '#F5D0D8',
+            rosa2:    '#E8B4BE',
+            offwhite: '#FFF8F9',
+            vinho:    '#3D1F25',
+          },
+          fontFamily: {
+            serif: ['"Playfair Display"', 'Georgia', 'serif'],
+            sans:  ['Lato', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+
+    /* Esconde o painel até autenticar */
+    #painel { display: none; }
+
+    /* Transição suave das abas */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Barra de progresso */
+    #barra-progresso { transition: width .4s ease; }
+
+    /* Checkbox customizado */
+    .check-item input[type="checkbox"]:checked + label {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+
+    /* Scrollbar discreta */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #FFF8F9; }
+    ::-webkit-scrollbar-thumb { background: #E8B4BE; border-radius: 3px; }
+
+    /* Badge de status */
+    .badge-confirmado  { background: #dcfce7; color: #166534; }
+    .badge-pendente    { background: #fef9c3; color: #854d0e; }
+    .badge-recusado    { background: #fee2e2; color: #991b1b; }
+    .badge-escolhido   { background: #ede9fe; color: #5b21b6; }
+    .badge-disponivel  { background: #f1f5f9; color: #475569; }
+    @keyframes btn-spin { to { transform: rotate(360deg); } }
+    .btn-spinner {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: btn-spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+
+<body class="bg-offwhite text-vinho font-sans min-h-screen">
+
+  <!-- ══════════════════════════════════════
+       MODAL DE SENHA
+  ═══════════════════════════════════════ -->
+  <div id="modal-senha" class="fixed inset-0 z-50 flex items-center justify-center bg-vinho/80 backdrop-blur-sm px-4">
+    <div class="bg-offwhite rounded-sm shadow-2xl p-10 w-full max-w-sm flex flex-col items-center gap-6 text-center">
+
+      <p class="font-serif text-3xl text-marsala italic">E & R</p>
+      <div>
+        <h1 class="font-serif text-xl text-vinho">Painel dos Noivos</h1>
+        <p class="text-xs tracking-widest uppercase text-vinho/50 mt-1">Área privada</p>
+      </div>
+
+      <div class="w-full flex flex-col gap-3">
+        <label class="text-xs tracking-widest uppercase text-vinho/60 text-left">Senha de acesso</label>
+        <input id="input-senha" type="password" placeholder="••••••••"
+               class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
+                      focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+        <p id="erro-senha" class="text-xs text-red-500 text-left hidden">Senha incorreta. Tente novamente.</p>
+        <button onclick="verificarSenha()"
+                class="w-full py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase
+                       hover:bg-marsala2 active:scale-95 transition-all duration-200 rounded-sm">
+          Entrar
+        </button>
+      </div>
+
+      <a href="index.html" class="text-xs text-vinho/40 hover:text-marsala transition-colors tracking-widest uppercase">
+        ← Voltar ao site
+      </a>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PAINEL PRINCIPAL
+  ═══════════════════════════════════════ -->
+  <div id="painel">
+
+    <!-- Cabeçalho -->
+    <header class="bg-vinho text-offwhite px-6 py-4 flex items-center justify-between shadow-md">
+      <div class="flex items-center gap-3">
+        <span class="font-serif text-xl text-rosa italic">E & R</span>
+        <span class="hidden sm:inline text-offwhite/40 text-xs tracking-widest uppercase">Painel dos Noivos</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-xs text-offwhite/50 hidden sm:inline">18 · 09 · 2027</span>
+        <a href="index.html" class="text-xs tracking-widest uppercase text-offwhite/60 hover:text-rosa transition-colors">
+          Ver site
+        </a>
+        <button onclick="sair()" class="text-xs tracking-widest uppercase text-offwhite/60 hover:text-rosa transition-colors">
+          Sair
+        </button>
+      </div>
+    </header>
+
+    <!-- Navegação por abas -->
+    <nav class="bg-white border-b border-rosa2/40 px-4 sm:px-8 overflow-x-auto">
+      <ul class="flex gap-0 whitespace-nowrap">
+        <li>
+          <button onclick="mudarAba('convidados')" id="tab-convidados"
+                  class="tab-btn px-5 py-4 text-sm tracking-wider uppercase border-b-2 border-transparent
+                         text-vinho/50 hover:text-marsala transition-all">
+            👥 Convidados
+            <span id="badge-rsvp"
+                  class="hidden ml-2 px-1.5 py-0.5 text-xs bg-marsala text-offwhite rounded-full align-middle leading-none">0</span>
+          </button>
+        </li>
+        <li>
+          <button onclick="mudarAba('checklist')" id="tab-checklist"
+                  class="tab-btn px-5 py-4 text-sm tracking-wider uppercase border-b-2 border-transparent
+                         text-vinho/50 hover:text-marsala transition-all">
+            ✅ Checklist
+          </button>
+        </li>
+        <li>
+          <button onclick="mudarAba('orcamento')" id="tab-orcamento"
+                  class="tab-btn px-5 py-4 text-sm tracking-wider uppercase border-b-2 border-transparent
+                         text-vinho/50 hover:text-marsala transition-all">
+            💰 Orçamento
+          </button>
+        </li>
+        <li>
+          <button onclick="mudarAba('geritens')" id="tab-geritens"
+                  class="tab-btn px-5 py-4 text-sm tracking-wider uppercase border-b-2 border-transparent
+                         text-vinho/50 hover:text-marsala transition-all">
+            🎁 Gerenciar Itens
+          </button>
+        </li>
+        <li>
+          <button onclick="mudarAba('recebidos')" id="tab-recebidos"
+                  class="tab-btn px-5 py-4 text-sm tracking-wider uppercase border-b-2 border-transparent
+                         text-vinho/50 hover:text-marsala transition-all">
+            📬 Recebidos
+          </button>
+        </li>
+        <li>
+          <button onclick="mudarAba('galeria')" id="tab-galeria"
+                  class="tab-btn px-5 py-4 text-sm tracking-wider uppercase border-b-2 border-transparent
+                         text-vinho/50 hover:text-marsala transition-all">
+            📷 Gerenciar Galeria
+          </button>
+        </li>
+        <li>
+          <button onclick="mudarAba('historia'); carregarTextoHistoria()" id="tab-historia"
+                  class="tab-btn px-5 py-4 text-sm tracking-wider uppercase border-b-2 border-transparent
+                         text-vinho/50 hover:text-marsala transition-all">
+            ✍️ Editar História
+          </button>
+        </li>
+        <li>
+          <button onclick="mudarAba('config'); carregarConfiguracoes()" id="tab-config"
+                  class="tab-btn px-5 py-4 text-sm tracking-wider uppercase border-b-2 border-transparent
+                         text-vinho/50 hover:text-marsala transition-all">
+            ⚙️ Configurações
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Conteúdo das abas -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-8 py-10">
+
+      <!-- ─────────────────────────────────────
+           ABA: CONVIDADOS
+      ──────────────────────────────────────── -->
+      <div id="content-convidados" class="tab-content">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="font-serif text-2xl text-vinho">Lista de Convidados</h2>
+            <p class="text-xs text-vinho/50 mt-1 tracking-wide">
+              Total: <span id="total-convidados" class="font-bold text-marsala">0</span> &nbsp;·&nbsp;
+              Confirmados: <span id="total-confirmados" class="font-bold text-green-700">0</span> &nbsp;·&nbsp;
+              Pendentes: <span id="total-pendentes" class="font-bold text-yellow-700">0</span> &nbsp;·&nbsp;
+              Recusados: <span id="total-recusados" class="font-bold text-red-700">0</span>
+            </p>
+          </div>
+          <button onclick="abrirModalConvidado()"
+                  class="px-5 py-2 bg-marsala text-offwhite text-xs tracking-widest uppercase
+                         hover:bg-marsala2 transition-colors rounded-sm shrink-0">
+            + Adicionar
+          </button>
+        </div>
+
+        <!-- ── Novas confirmações do site ─────────────── -->
+        <div id="rsvp-inbox" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold tracking-widest uppercase text-marsala flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-marsala animate-pulse inline-block"></span>
+              Novas confirmações do site
+              <span id="rsvp-inbox-count" class="px-2 py-0.5 bg-marsala text-offwhite rounded-full text-xs"></span>
+            </h3>
+            <button onclick="dispensarTodas()"
+                    class="text-xs text-vinho/40 hover:text-marsala transition-colors tracking-wide">
+              Dispensar todas
+            </button>
+          </div>
+          <div id="rsvp-inbox-lista" class="flex flex-col gap-3"></div>
+        </div>
+
+        <!-- Filtro -->
+        <div class="flex gap-2 mb-4 flex-wrap">
+          <button onclick="filtrarConvidados('todos')"    class="filtro-btn px-3 py-1 text-xs rounded-full border border-rosa2 text-vinho/60 hover:border-marsala hover:text-marsala transition-all" data-filtro="todos">Todos</button>
+          <button onclick="filtrarConvidados('Confirmado')" class="filtro-btn px-3 py-1 text-xs rounded-full border border-rosa2 text-vinho/60 hover:border-marsala hover:text-marsala transition-all" data-filtro="Confirmado">Confirmados</button>
+          <button onclick="filtrarConvidados('Pendente')"   class="filtro-btn px-3 py-1 text-xs rounded-full border border-rosa2 text-vinho/60 hover:border-marsala hover:text-marsala transition-all" data-filtro="Pendente">Pendentes</button>
+          <button onclick="filtrarConvidados('Recusado')"   class="filtro-btn px-3 py-1 text-xs rounded-full border border-rosa2 text-vinho/60 hover:border-marsala hover:text-marsala transition-all" data-filtro="Recusado">Recusados</button>
+        </div>
+
+        <!-- Tabela -->
+        <div class="overflow-x-auto rounded-sm border border-rosa2/40">
+          <table class="w-full text-sm">
+            <thead class="bg-rosa text-vinho text-xs tracking-widest uppercase">
+              <tr>
+                <th class="px-4 py-3 text-left">#</th>
+                <th class="px-4 py-3 text-left">Nome</th>
+                <th class="px-4 py-3 text-left">WhatsApp</th>
+                <th class="px-4 py-3 text-left">Acompanhante</th>
+                <th class="px-4 py-3 text-left">Status</th>
+                <th class="px-4 py-3 text-left">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-convidados" class="divide-y divide-rosa2/30 bg-white">
+              <!-- preenchido pelo JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           ABA: CHECKLIST
+      ──────────────────────────────────────── -->
+      <div id="content-checklist" class="tab-content">
+
+        <div class="mb-6">
+          <h2 class="font-serif text-2xl text-vinho mb-1">Checklist do Casamento</h2>
+          <p class="text-xs text-vinho/50 tracking-wide">
+            <span id="tarefas-feitas">0</span> de <span id="tarefas-total">0</span> tarefas concluídas
+          </p>
+        </div>
+
+        <!-- Barra de progresso -->
+        <div class="w-full bg-rosa2/30 rounded-full h-3 mb-8 overflow-hidden">
+          <div id="barra-progresso" class="h-3 bg-marsala rounded-full" style="width: 0%"></div>
+        </div>
+
+        <!-- Grupos de tarefas -->
+        <div id="lista-checklist" class="flex flex-col gap-6">
+          <!-- preenchido pelo JS -->
+        </div>
+
+        <!-- Adicionar novo grupo -->
+        <div class="mt-6">
+          <div id="cl-add-grupo" class="hidden flex gap-2 items-center mb-3">
+            <input id="cl-nome-grupo" type="text" placeholder="Nome do novo grupo…"
+                   onkeydown="if(event.key==='Enter')confirmarAddGrupo();if(event.key==='Escape')cancelarAddGrupo()"
+                   class="flex-1 border border-marsala bg-offwhite px-3 py-2 text-sm text-vinho placeholder:text-vinho/30
+                          focus:outline-none rounded-sm" />
+            <button onclick="confirmarAddGrupo()"
+                    class="px-4 py-2 bg-marsala text-offwhite text-xs tracking-widest uppercase rounded-sm hover:bg-marsala2 transition-colors">
+              Criar
+            </button>
+            <button onclick="cancelarAddGrupo()" class="text-xs text-vinho/40 hover:text-marsala transition-colors">Cancelar</button>
+          </div>
+          <button onclick="mostrarAddGrupo()"
+                  class="flex items-center gap-2 text-sm text-vinho/50 hover:text-marsala transition-colors tracking-wide border border-dashed border-rosa2 hover:border-marsala rounded-sm px-4 py-2.5 w-full justify-center">
+            <span class="text-lg leading-none">+</span> Novo grupo
+          </button>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           ABA: ORÇAMENTO
+      ──────────────────────────────────────── -->
+      <div id="content-orcamento" class="tab-content">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h2 class="font-serif text-2xl text-vinho">Orçamento</h2>
+          <button onclick="abrirModalOrcamento()"
+                  class="px-5 py-2 bg-marsala text-offwhite text-xs tracking-widest uppercase
+                         hover:bg-marsala2 transition-colors rounded-sm shrink-0">
+            + Adicionar
+          </button>
+        </div>
+
+        <!-- Cards de resumo -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div class="bg-white border border-rosa2/40 rounded-sm p-5">
+            <p class="text-xs tracking-widest uppercase text-vinho/50 mb-1">Total Estimado</p>
+            <p id="resumo-estimado" class="font-serif text-2xl text-vinho">R$ 0</p>
+          </div>
+          <div class="bg-white border border-rosa2/40 rounded-sm p-5">
+            <p class="text-xs tracking-widest uppercase text-vinho/50 mb-1">Total Pago</p>
+            <p id="resumo-pago" class="font-serif text-2xl text-green-700">R$ 0</p>
+          </div>
+          <div class="bg-rosa border border-rosa2/40 rounded-sm p-5">
+            <p class="text-xs tracking-widest uppercase text-vinho/50 mb-1">Saldo Devedor</p>
+            <p id="resumo-saldo" class="font-serif text-2xl text-marsala">R$ 0</p>
+          </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="overflow-x-auto rounded-sm border border-rosa2/40">
+          <table class="w-full text-sm">
+            <thead class="bg-rosa text-vinho text-xs tracking-widest uppercase">
+              <tr>
+                <th class="px-4 py-3 text-left">Fornecedor</th>
+                <th class="px-4 py-3 text-left">Categoria</th>
+                <th class="px-4 py-3 text-right">Estimado</th>
+                <th class="px-4 py-3 text-right">Pago</th>
+                <th class="px-4 py-3 text-right">Saldo</th>
+                <th class="px-4 py-3 text-left">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-orcamento" class="divide-y divide-rosa2/30 bg-white">
+              <!-- preenchido pelo JS -->
+            </tbody>
+            <tfoot class="bg-rosa/60 border-t-2 border-rosa2 text-vinho font-bold text-xs tracking-widest uppercase">
+              <tr>
+                <td colspan="2" class="px-4 py-3">Total Geral</td>
+                <td id="tfoot-estimado" class="px-4 py-3 text-right">—</td>
+                <td id="tfoot-pago"     class="px-4 py-3 text-right text-green-700">—</td>
+                <td id="tfoot-saldo"    class="px-4 py-3 text-right text-marsala">—</td>
+                <td class="px-4 py-3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           ABA: PRESENTES
+      ──────────────────────────────────────── -->
+      <!-- ─────────────────────────────────────
+           ABA: GERENCIAR ITENS
+      ──────────────────────────────────────── -->
+      <div id="content-geritens" class="tab-content">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="font-serif text-2xl text-vinho">Catálogo de Presentes</h2>
+            <p class="text-xs text-vinho/50 mt-1 tracking-wide">
+              Total: <span id="cat-total" class="font-bold text-marsala">0</span> &nbsp;·&nbsp;
+              Ativos: <span id="cat-ativos" class="font-bold text-green-700">0</span> &nbsp;·&nbsp;
+              Reservados: <span id="cat-reservados" class="font-bold text-purple-700">0</span>
+            </p>
+          </div>
+          <button onclick="abrirModalItem(null)"
+                  class="px-5 py-2 bg-marsala text-offwhite text-xs tracking-widest uppercase
+                         hover:bg-marsala2 transition-colors rounded-sm shrink-0">
+            + Adicionar
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-sm border border-rosa2/40">
+          <table class="w-full text-sm">
+            <thead class="bg-rosa text-vinho text-xs tracking-widest uppercase">
+              <tr>
+                <th class="px-4 py-3 text-left w-16">Img</th>
+                <th class="px-4 py-3 text-left">Nome / Descrição</th>
+                <th class="px-4 py-3 text-center w-24">Ativo</th>
+                <th class="px-4 py-3 text-left w-28">Status</th>
+                <th class="px-4 py-3 text-left w-36">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-catalogo" class="divide-y divide-rosa2/30 bg-white">
+              <!-- preenchido pelo JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           ABA: PRESENTES RECEBIDOS
+      ──────────────────────────────────────── -->
+      <div id="content-recebidos" class="tab-content">
+
+        <div class="mb-6">
+          <h2 class="font-serif text-2xl text-vinho">Presentes Recebidos</h2>
+          <p class="text-xs text-vinho/50 mt-1 tracking-wide">
+            Reservados: <span id="receb-total" class="font-bold text-marsala">0</span>
+          </p>
+        </div>
+
+        <div class="overflow-x-auto rounded-sm border border-rosa2/40">
+          <table class="w-full text-sm">
+            <thead class="bg-rosa text-vinho text-xs tracking-widest uppercase">
+              <tr>
+                <th class="px-4 py-3 text-left">Presente</th>
+                <th class="px-4 py-3 text-left">Reservado Por</th>
+                <th class="px-4 py-3 text-left">WhatsApp</th>
+                <th class="px-4 py-3 text-left">Data</th>
+                <th class="px-4 py-3 text-left">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-recebidos" class="divide-y divide-rosa2/30 bg-white">
+              <!-- preenchido pelo JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           ABA: GERENCIAR GALERIA
+      ──────────────────────────────────────── -->
+      <div id="content-galeria" class="tab-content">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="font-serif text-2xl text-vinho">Galeria de Fotos</h2>
+            <p class="text-xs text-vinho/50 mt-1 tracking-wide">
+              Total: <span id="galeria-total" class="font-bold text-marsala">0</span> foto(s) cadastrada(s)
+            </p>
+          </div>
+        </div>
+
+        <!-- Formulário de adição -->
+        <div class="bg-white border border-rosa2/40 rounded-sm p-6 mb-6">
+          <h3 class="font-serif text-lg text-vinho mb-4">Adicionar Nova Foto</h3>
+          <div class="flex flex-col gap-4">
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">URL do Google Drive *</label>
+              <input id="gal-url" type="url"
+                     placeholder="https://drive.google.com/file/d/…/view"
+                     class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala
+                            transition-colors rounded-sm" />
+              <p class="text-xs text-vinho/40 mt-1">
+                Cole o link de compartilhamento do Google Drive — o formato será convertido automaticamente.
+              </p>
+            </div>
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Legenda Curta</label>
+              <input id="gal-legenda" type="text"
+                     placeholder="Ex: Nossa primeira viagem juntos…"
+                     class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala
+                            transition-colors rounded-sm" />
+            </div>
+            <div>
+              <button onclick="adicionarFoto()"
+                      class="px-6 py-2.5 bg-marsala text-offwhite text-xs tracking-widest uppercase
+                             hover:bg-marsala2 active:scale-95 transition-all duration-200 rounded-sm">
+                + Adicionar Foto
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de fotos cadastradas -->
+        <div id="galeria-lista-painel" class="flex flex-col gap-3"></div>
+
+        <!-- Estado vazio -->
+        <div id="galeria-vazia-painel"
+             class="hidden text-center py-12 border border-dashed border-rosa2/60 rounded-sm bg-white">
+          <p class="text-sm text-vinho/40 italic">Nenhuma foto cadastrada ainda.</p>
+          <p class="text-xs text-vinho/30 mt-1">Use o formulário acima para adicionar a primeira foto.</p>
+        </div>
+
+      </div>
+
+      <!-- ─────────────────────────────────────
+           ABA: EDITAR HISTÓRIA
+      ──────────────────────────────────────── -->
+      <div id="content-historia" class="tab-content">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="font-serif text-2xl text-vinho">Nossa História</h2>
+            <p class="text-xs text-vinho/50 mt-1 tracking-wide">
+              O texto abaixo aparece na seção "Nossa História" do site dos convidados.
+            </p>
+          </div>
+        </div>
+
+        <div class="bg-white border border-rosa2/40 rounded-sm p-6 flex flex-col gap-4">
+          <label class="block text-xs tracking-widest uppercase text-vinho/60">
+            Escreva nossa história aqui
+          </label>
+          <textarea id="historia-texto-painel" rows="14"
+                    placeholder="Conte como tudo começou, onde se conheceram, momentos especiais, pedido de casamento…"
+                    class="w-full border border-rosa2 bg-offwhite px-4 py-3 text-sm text-vinho
+                           placeholder:text-vinho/30 focus:outline-none focus:border-marsala
+                           transition-colors rounded-sm resize-y leading-relaxed"></textarea>
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <p class="text-xs text-vinho/40 italic">
+              As quebras de linha do texto serão preservadas no site.
+            </p>
+            <button onclick="salvarTextoHistoria(this)"
+                    class="shrink-0 px-6 py-2.5 bg-marsala text-offwhite text-xs tracking-widest uppercase
+                           rounded-sm hover:bg-vinho transition-colors">
+              Salvar Texto
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ─────────────────────────────────────
+           ABA: CONFIGURAÇÕES GERAIS
+      ──────────────────────────────────────── -->
+      <div id="content-config" class="tab-content">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="font-serif text-2xl text-vinho">Configurações Gerais</h2>
+            <p class="text-xs text-vinho/50 mt-1 tracking-wide">
+              Controla a identidade visual e o acesso do site dos convidados.
+            </p>
+          </div>
+        </div>
+
+        <!-- Identidade -->
+        <div class="bg-white border border-rosa2/40 rounded-sm p-6 mb-6">
+          <h3 class="font-serif text-lg text-vinho mb-4">Identidade do Casal</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Nome do Noivo</label>
+              <input id="cfg-noivo" type="text" placeholder="Elyabe"
+                     class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+            </div>
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Nome da Noiva</label>
+              <input id="cfg-noiva" type="text" placeholder="Raianny"
+                     class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+            </div>
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Iniciais (ex: E & R)</label>
+              <input id="cfg-iniciais" type="text" placeholder="E & R"
+                     class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+            </div>
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Data do Casamento</label>
+              <input id="cfg-data" type="date"
+                     class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Cores -->
+        <div class="bg-white border border-rosa2/40 rounded-sm p-6 mb-6">
+          <h3 class="font-serif text-lg text-vinho mb-1">Paleta de Cores</h3>
+          <p class="text-xs text-vinho/40 mb-4">As cores serão aplicadas imediatamente no site dos convidados.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div class="flex items-center gap-4">
+              <input id="cfg-cor-marsala" type="color" value="#8E3B46"
+                     class="w-14 h-14 rounded-sm border border-rosa2 cursor-pointer p-1 bg-offwhite" />
+              <div>
+                <p class="text-sm font-medium text-vinho">Cor Principal</p>
+                <p class="text-xs text-vinho/40">Marsala — botões, destaques, bordas ativas</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <input id="cfg-cor-rosa" type="color" value="#F5D0D8"
+                     class="w-14 h-14 rounded-sm border border-rosa2 cursor-pointer p-1 bg-offwhite" />
+              <div>
+                <p class="text-sm font-medium text-vinho">Cor Secundária</p>
+                <p class="text-xs text-vinho/40">Rosa — fundos suaves, cards, galeria</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acesso -->
+        <div class="bg-white border border-rosa2/40 rounded-sm p-6 mb-6">
+          <h3 class="font-serif text-lg text-vinho mb-1">Controle de Acesso</h3>
+          <p class="text-xs text-vinho/40 mb-5">Gerencie as senhas de entrada do site e do painel.</p>
+          <div class="flex flex-col gap-5">
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Senha dos Convidados</label>
+              <input id="cfg-senha" type="text" placeholder="Casamento2026"
+                     class="w-full sm:max-w-xs border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+              <p class="text-xs text-vinho/40 mt-1">Avise os convidados desta senha após alterá-la.</p>
+            </div>
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Senha do Painel dos Noivos</label>
+              <input id="cfg-senha-noivos" type="text" placeholder="noivos2027"
+                     class="w-full sm:max-w-xs border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+              <p class="text-xs text-vinho/40 mt-1">Senha usada para entrar neste painel de administração.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botão salvar -->
+        <div class="flex justify-end">
+          <button onclick="salvarConfiguracoes(this)"
+                  class="px-8 py-3 bg-marsala text-offwhite text-xs tracking-widest uppercase
+                         rounded-sm hover:bg-vinho transition-colors">
+            Salvar Configurações
+          </button>
+        </div>
+
+      </div>
+
+    </main>
+  </div><!-- /painel -->
+
+
+  <!-- ══════════════════════════════════════
+       MODAIS
+  ═══════════════════════════════════════ -->
+
+  <!-- Modal Adicionar Convidado -->
+  <div id="modal-convidado" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-vinho/60 backdrop-blur-sm px-4">
+    <div class="bg-offwhite rounded-sm shadow-2xl p-8 w-full max-w-md flex flex-col gap-4">
+      <h3 class="font-serif text-xl text-vinho">Novo Convidado</h3>
+      <input id="novo-nome" type="text" placeholder="Nome completo"
+             class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      <input id="novo-whats" type="text" placeholder="WhatsApp (ex: 11999990000)"
+             class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      <input id="novo-acomp" type="text" placeholder="Acompanhante (deixe vazio se não tiver)"
+             class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      <select id="novo-status" class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm">
+        <option value="Pendente">Pendente</option>
+        <option value="Confirmado">Confirmado</option>
+        <option value="Recusado">Recusado</option>
+      </select>
+      <div class="flex gap-3 mt-2">
+        <button onclick="fecharModal('modal-convidado')"
+                class="flex-1 py-2 border border-rosa2 text-vinho/60 text-xs uppercase tracking-widest hover:border-marsala hover:text-marsala transition-colors rounded-sm">
+          Cancelar
+        </button>
+        <button onclick="salvarConvidado()"
+                class="flex-1 py-2 bg-marsala text-offwhite text-xs uppercase tracking-widest hover:bg-marsala2 transition-colors rounded-sm">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Adicionar Orçamento -->
+  <div id="modal-orcamento" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-vinho/60 backdrop-blur-sm px-4">
+    <div class="bg-offwhite rounded-sm shadow-2xl p-8 w-full max-w-md flex flex-col gap-4">
+      <h3 class="font-serif text-xl text-vinho">Novo Item de Orçamento</h3>
+      <input id="orc-fornecedor" type="text" placeholder="Fornecedor"
+             class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      <input id="orc-categoria" type="text" placeholder="Categoria (ex: Buffet, Flores…)"
+             class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      <input id="orc-estimado" type="number" placeholder="Valor estimado (R$)"
+             class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      <input id="orc-pago" type="number" placeholder="Valor já pago (R$)"
+             class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      <div class="flex gap-3 mt-2">
+        <button onclick="fecharModal('modal-orcamento')"
+                class="flex-1 py-2 border border-rosa2 text-vinho/60 text-xs uppercase tracking-widest hover:border-marsala hover:text-marsala transition-colors rounded-sm">
+          Cancelar
+        </button>
+        <button onclick="salvarOrcamento()"
+                class="flex-1 py-2 bg-marsala text-offwhite text-xs uppercase tracking-widest hover:bg-marsala2 transition-colors rounded-sm">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Adicionar Presente -->
+  <!-- Modal Adicionar / Editar Item do Catálogo -->
+  <div id="modal-item" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-vinho/60 backdrop-blur-sm px-4">
+    <div class="bg-offwhite rounded-sm shadow-2xl p-8 w-full max-w-md flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+      <h3 id="item-modal-titulo" class="font-serif text-xl text-vinho">Novo Presente</h3>
+
+      <div>
+        <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Nome do Presente *</label>
+        <input id="item-nome" type="text" placeholder="Ex: Air Fryer 4L"
+               class="w-full border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      </div>
+
+      <div>
+        <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">URL da Imagem</label>
+        <input id="item-imagem" type="url" placeholder="https://…"
+               class="w-full border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+        <p class="text-xs text-vinho/40 mt-1">Cole o endereço de uma imagem da internet</p>
+      </div>
+
+      <div>
+        <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Descrição</label>
+        <textarea id="item-descricao" rows="3" placeholder="Detalhes sobre o presente…"
+                  class="w-full border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm resize-none"></textarea>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs tracking-widest uppercase text-vinho/60">Ativo no Site</p>
+          <p class="text-xs text-vinho/40 mt-0.5">Desative para ocultar temporariamente</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input id="item-ativo" type="checkbox" checked class="sr-only peer">
+          <div class="w-11 h-6 bg-rosa2 peer-checked:bg-marsala rounded-full transition-colors duration-200 relative
+                      after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
+                      after:h-5 after:w-5 after:transition-all after:duration-200 peer-checked:after:translate-x-5"></div>
+        </label>
+      </div>
+
+      <div class="flex gap-3 mt-2">
+        <button onclick="fecharModal('modal-item')"
+                class="flex-1 py-2 border border-rosa2 text-vinho/60 text-xs uppercase tracking-widest hover:border-marsala hover:text-marsala transition-colors rounded-sm">
+          Cancelar
+        </button>
+        <button id="btn-salvar-item" onclick="salvarItem()"
+                class="flex-1 py-2 bg-marsala text-offwhite text-xs uppercase tracking-widest hover:bg-marsala2 transition-colors rounded-sm">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════
+       JAVASCRIPT
+  ═══════════════════════════════════════ -->
+  <script>
+    /* ── API LAYER — Google Sheets via Apps Script ──────── */
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxRhG6azGa5mG0EGXWbYDsxQAs3HWhKrgUZuzlxlM3Jqc8J6Q1ELEqv751YSdDUZuAaFA/exec';
+
+    async function apiGet(sheet, localKey, padrao) {
+      if (padrao === undefined) padrao = null;
+      if (!API_URL) {
+        const raw = localStorage.getItem(localKey);
+        return raw ? JSON.parse(raw) : padrao;
+      }
+      try {
+        const res  = await fetch(API_URL + '?sheet=' + encodeURIComponent(sheet));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        if (json.ok && json.data !== null) {
+          localStorage.setItem(localKey, JSON.stringify(json.data));
+          return json.data;
+        }
+      } catch (err) {
+        console.warn('[API] GET "' + sheet + '" falhou — usando cache local:', err.message);
+      }
+      const raw = localStorage.getItem(localKey);
+      return raw ? JSON.parse(raw) : padrao;
+    }
+
+    async function apiPost(sheet, data, localKey, modo) {
+      if (!modo) modo = 'replace';
+      if (modo === 'append') {
+        let arr = [];
+        try { arr = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch(e) {}
+        arr.push(data);
+        localStorage.setItem(localKey, JSON.stringify(arr));
+      } else {
+        localStorage.setItem(localKey, JSON.stringify(data));
+      }
+      if (!API_URL) return true;
+      try {
+        const body = new URLSearchParams({ payload: JSON.stringify({ sheet, data, modo }) });
+        const res  = await fetch(API_URL, { method: 'POST', body });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.erro || 'Resposta não-ok da API');
+        return true;
+      } catch (err) {
+        console.warn('[API] POST "' + sheet + '" falhou:', err.message);
+        return false;
+      }
+    }
+
+    /* ── SENHA ─────────────────────────────────────────── */
+    function verificarSenha() {
+      var cfg = {};
+      try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch(e) {}
+      const SENHA_CORRETA = cfg.senhaNoivos || 'noivos2027';
+      const val = document.getElementById('input-senha').value;
+      if (val === SENHA_CORRETA) {
+        sessionStorage.setItem('autenticado', '1');
+        document.getElementById('modal-senha').style.display = 'none';
+        document.getElementById('painel').style.display = 'block';
+        inicializar();
+      } else {
+        document.getElementById('erro-senha').classList.remove('hidden');
+        document.getElementById('input-senha').value = '';
+        document.getElementById('input-senha').focus();
+      }
+    }
+
+    document.getElementById('input-senha').addEventListener('keydown', e => {
+      if (e.key === 'Enter') verificarSenha();
+    });
+
+    function sair() {
+      sessionStorage.removeItem('autenticado');
+      location.reload();
+    }
+
+    // Mantém sessão ativa enquanto a aba estiver aberta
+    if (sessionStorage.getItem('autenticado') === '1') {
+      document.getElementById('modal-senha').style.display = 'none';
+      document.getElementById('painel').style.display = 'block';
+      window.addEventListener('load', inicializar);
+    }
+
+    /* ── ABAS ─────────────────────────────────────────── */
+    function mudarAba(aba) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-marsala', 'text-marsala', 'font-bold');
+        btn.classList.add('border-transparent', 'text-vinho/50');
+      });
+      document.getElementById('content-' + aba).classList.add('active');
+      const btn = document.getElementById('tab-' + aba);
+      btn.classList.add('border-marsala', 'text-marsala', 'font-bold');
+      btn.classList.remove('border-transparent', 'text-vinho/50');
+    }
+
+    /* ── DADOS (localStorage) ──────────────────────────── */
+    function carregar(chave, padrao) {
+      try { return JSON.parse(localStorage.getItem(chave)) || padrao; } catch { return padrao; }
+    }
+    function salvar(chave, dados) { localStorage.setItem(chave, JSON.stringify(dados)); }
+
+    /* ── DADOS INICIAIS ───────────────────────────────── */
+    const convidadosPadrao = [
+      { nome: 'Ana Lima',       whats: '11991110000', acomp: 'Carlos Lima',    status: 'Confirmado' },
+      { nome: 'Pedro Souza',    whats: '11982220000', acomp: '',               status: 'Pendente'   },
+      { nome: 'Fernanda Costa', whats: '11973330000', acomp: 'João Costa',     status: 'Confirmado' },
+      { nome: 'Marcos Rocha',   whats: '11964440000', acomp: '',               status: 'Recusado'   },
+      { nome: 'Juliana Matos',  whats: '11955550000', acomp: 'Rafael Matos',   status: 'Pendente'   },
+    ];
+
+    const checklistPadrao = [
+      { grupo: 'Documentação & Burocracia', tarefas: [
+        { texto: 'Agendar habilitação no cartório', feita: false },
+        { texto: 'Providenciar certidão de nascimento atualizada', feita: false },
+        { texto: 'Escolher e confirmar testemunhas', feita: false },
+      ]},
+      { grupo: 'Local & Cerimônia', tarefas: [
+        { texto: 'Fechar contrato com o espaço de festa', feita: true },
+        { texto: 'Confirmar celebrante / padre / pastor', feita: false },
+        { texto: 'Decoração da cerimônia', feita: false },
+      ]},
+      { grupo: 'Fornecedores', tarefas: [
+        { texto: 'Contratar buffet', feita: true },
+        { texto: 'Contratar fotógrafo e cinegrafista', feita: false },
+        { texto: 'Contratar DJ ou banda', feita: false },
+        { texto: 'Contratar floricultura', feita: false },
+        { texto: 'Contratar carro dos noivos', feita: false },
+      ]},
+      { grupo: 'Looks dos Noivos', tarefas: [
+        { texto: 'Escolher vestido de noiva', feita: true },
+        { texto: 'Escolher traje do noivo', feita: false },
+        { texto: 'Agendar maquiagem e penteado', feita: false },
+      ]},
+      { grupo: 'Convites & Convidados', tarefas: [
+        { texto: 'Definir lista de convidados', feita: true },
+        { texto: 'Enviar convites', feita: false },
+        { texto: 'Montar lista de presentes', feita: false },
+      ]},
+    ];
+
+    const orcamentoPadrao = [
+      { fornecedor: 'Espaço Villa Rosa',   categoria: 'Local',       estimado: 15000, pago: 5000  },
+      { fornecedor: 'Buffet Sabor & Arte', categoria: 'Alimentação', estimado: 12000, pago: 3000  },
+      { fornecedor: 'Foto & Film Studio',  categoria: 'Foto/Vídeo',  estimado: 8000,  pago: 2000  },
+      { fornecedor: 'Atelier Noiva',       categoria: 'Vestido',     estimado: 4500,  pago: 4500  },
+      { fornecedor: 'DJ Marco Hits',       categoria: 'Música',      estimado: 3000,  pago: 0     },
+      { fornecedor: 'Flores & Sonhos',     categoria: 'Decoração',   estimado: 5500,  pago: 1500  },
+    ];
+
+    const catalogoPadrao = [
+      { id: 1001, nome: 'Air Fryer 4L',      imagem: '', descricao: 'Air fryer 4L, ideal para cozinhar com menos óleo e mais sabor.',              ativo: true,  reservadoPor: null },
+      { id: 1002, nome: 'Jogo de Panelas',   imagem: '', descricao: 'Jogo com 5 panelas antiaderentes de diferentes tamanhos.',                    ativo: true,  reservadoPor: null },
+      { id: 1003, nome: 'Liquidificador',    imagem: '', descricao: 'Liquidificador 1000W com 12 velocidades e copo de vidro temperado.',           ativo: true,  reservadoPor: null },
+      { id: 1004, nome: 'Jogo de Cama King', imagem: '', descricao: 'Jogo de cama 100% algodão egípcio para cama King size.',                      ativo: true,  reservadoPor: null },
+      { id: 1005, nome: 'Smart TV 55"',      imagem: '', descricao: 'Smart TV 55 polegadas 4K com acesso às principais plataformas de streaming.',  ativo: true,  reservadoPor: null },
+      { id: 1006, nome: 'Máquina de Café',   imagem: '', descricao: 'Cafeteira espresso com cappuccinatore e reservatório de 1,4L.',               ativo: true,  reservadoPor: null },
+      { id: 1007, nome: 'Micro-ondas 32L',   imagem: '', descricao: 'Micro-ondas 32L com grill e múltiplas funções automáticas.',                  ativo: true,  reservadoPor: null },
+      { id: 1008, nome: 'Jogo de Toalhas',   imagem: '', descricao: 'Jogo com 8 peças em algodão egípcio, macias e ultra absorventes.',            ativo: false, reservadoPor: null },
+    ];
+
+    /* ── CONVIDADOS ───────────────────────────────────── */
+    let convidados = [];
+    let filtroAtual = 'todos';
+
+    function renderizarConvidados() {
+      const lista = filtroAtual === 'todos'
+        ? convidados
+        : convidados.filter(c => c.status === filtroAtual);
+
+      const tbody = document.getElementById('tabela-convidados');
+      tbody.innerHTML = lista.map((c, i) => {
+        const idx = convidados.indexOf(c);
+        const badge = c.status === 'Confirmado' ? 'badge-confirmado'
+                    : c.status === 'Recusado'   ? 'badge-recusado'
+                    : 'badge-pendente';
+        return `<tr class="hover:bg-rosa/20 transition-colors">
+          <td class="px-4 py-3 text-vinho/40 text-xs">${idx + 1}</td>
+          <td class="px-4 py-3 font-medium text-vinho">${c.nome}</td>
+          <td class="px-4 py-3 text-vinho/70">${c.whats || '—'}</td>
+          <td class="px-4 py-3 text-vinho/70">${c.acomp || '—'}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 text-xs rounded-full font-medium ${badge}">${c.status}</span>
+          </td>
+          <td class="px-4 py-3 flex gap-2">
+            <button onclick="alterarStatus(${idx})" class="text-xs text-vinho/40 hover:text-marsala transition-colors">Alterar</button>
+            <button onclick="removerConvidado(${idx})" class="text-xs text-vinho/40 hover:text-red-500 transition-colors">Excluir</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      // Contadores
+      document.getElementById('total-convidados').textContent  = convidados.length;
+      document.getElementById('total-confirmados').textContent = convidados.filter(c => c.status === 'Confirmado').length;
+      document.getElementById('total-pendentes').textContent   = convidados.filter(c => c.status === 'Pendente').length;
+      document.getElementById('total-recusados').textContent   = convidados.filter(c => c.status === 'Recusado').length;
+    }
+
+    function filtrarConvidados(f) {
+      filtroAtual = f;
+      renderizarConvidados();
+    }
+
+    function alterarStatus(idx) {
+      const ciclo = ['Pendente', 'Confirmado', 'Recusado'];
+      const atual = ciclo.indexOf(convidados[idx].status);
+      convidados[idx].status = ciclo[(atual + 1) % ciclo.length];
+      salvar('convidados', convidados);
+      renderizarConvidados();
+    }
+
+    function removerConvidado(idx) {
+      if (confirm('Remover ' + convidados[idx].nome + '?')) {
+        convidados.splice(idx, 1);
+        salvar('convidados', convidados);
+        renderizarConvidados();
+      }
+    }
+
+    function abrirModalConvidado() { document.getElementById('modal-convidado').classList.remove('hidden'); }
+
+    function salvarConvidado() {
+      const nome  = document.getElementById('novo-nome').value.trim();
+      const whats = document.getElementById('novo-whats').value.trim();
+      const acomp = document.getElementById('novo-acomp').value.trim();
+      const status = document.getElementById('novo-status').value;
+      if (!nome) return alert('Informe o nome.');
+      convidados.push({ nome, whats, acomp, status });
+      salvar('convidados', convidados);
+      fecharModal('modal-convidado');
+      ['novo-nome','novo-whats','novo-acomp'].forEach(id => document.getElementById(id).value = '');
+      renderizarConvidados();
+    }
+
+    /* ── CHECKLIST ────────────────────────────────────── */
+    let checklist = [];
+
+    /* Linha de tarefa — modo visualização */
+    function tarefaView(gi, ti) {
+      const t = checklist[gi].tarefas[ti];
+      const riscado = t.feita ? 'line-through opacity-40' : '';
+      return `<li id="cl-t-${gi}-${ti}" class="flex items-center gap-2 group/t">
+        <input type="checkbox" id="chk-${gi}-${ti}" ${t.feita ? 'checked' : ''}
+               onchange="toggleTarefa(${gi},${ti})"
+               class="w-4 h-4 accent-marsala cursor-pointer shrink-0" />
+        <label for="chk-${gi}-${ti}"
+               class="flex-1 text-sm text-vinho cursor-pointer select-none ${riscado}">
+          ${t.texto}
+        </label>
+        <button onclick="editarTarefa(${gi},${ti})" title="Editar"
+                class="shrink-0 opacity-0 group-hover/t:opacity-100 text-vinho/30 hover:text-marsala transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.415.586H9v-2a2 2 0 01.586-1.414z"/>
+          </svg>
+        </button>
+        <button onclick="removerTarefa(${gi},${ti})" title="Remover"
+                class="shrink-0 opacity-0 group-hover/t:opacity-100 text-vinho/30 hover:text-red-500 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </li>`;
+    }
+
+    /* Linha de tarefa — modo edição */
+    function tarefaEdit(gi, ti) {
+      const t = checklist[gi].tarefas[ti];
+      return `<li id="cl-t-${gi}-${ti}" class="flex items-center gap-2">
+        <input type="checkbox" disabled ${t.feita ? 'checked' : ''} class="w-4 h-4 opacity-20 shrink-0" />
+        <input id="cl-edit-${gi}-${ti}" value="${t.texto.replace(/"/g,'&quot;')}"
+               onkeydown="if(event.key==='Enter')confirmarEdicaoTarefa(${gi},${ti});if(event.key==='Escape')cancelarEdicaoTarefa(${gi},${ti})"
+               class="flex-1 border border-marsala bg-white px-2 py-1 text-sm text-vinho focus:outline-none rounded-sm" />
+        <button onclick="confirmarEdicaoTarefa(${gi},${ti})"
+                class="shrink-0 w-7 h-7 flex items-center justify-center bg-marsala text-offwhite rounded-sm hover:bg-marsala2 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+        </button>
+        <button onclick="cancelarEdicaoTarefa(${gi},${ti})"
+                class="shrink-0 text-vinho/40 hover:text-marsala transition-colors text-base leading-none">✕</button>
+      </li>`;
+    }
+
+    function renderizarChecklist() {
+      document.getElementById('lista-checklist').innerHTML = checklist.map((grupo, gi) => `
+        <div id="cl-grupo-${gi}" class="bg-white border border-rosa2/40 rounded-sm p-6">
+
+          <!-- Cabeçalho do grupo -->
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div id="cl-gtitle-${gi}" class="flex items-center gap-2 min-w-0 flex-1">
+              <h3 class="font-serif text-lg text-vinho truncate">${grupo.grupo}</h3>
+              <button onclick="editarGrupo(${gi})" title="Renomear grupo"
+                      class="shrink-0 text-vinho/20 hover:text-marsala transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.415.586H9v-2a2 2 0 01.586-1.414z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <button onclick="mostrarAddTarefa(${gi})"
+                      class="text-xs text-marsala hover:text-marsala2 tracking-wide transition-colors flex items-center gap-0.5">
+                <span class="text-base leading-none">+</span> Tarefa
+              </button>
+              <button onclick="removerGrupo(${gi})" title="Remover grupo"
+                      class="text-vinho/25 hover:text-red-500 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tarefas -->
+          <ul id="cl-lista-${gi}" class="flex flex-col gap-2.5">
+            ${grupo.tarefas.length
+              ? grupo.tarefas.map((_, ti) => tarefaView(gi, ti)).join('')
+              : `<li class="text-xs text-vinho/30 italic py-1">Sem tarefas. Clique em "+ Tarefa" para adicionar.</li>`}
+          </ul>
+
+          <!-- Input nova tarefa (oculto) -->
+          <div id="cl-add-${gi}" class="hidden mt-4 flex gap-2 items-center">
+            <input id="cl-nova-${gi}" type="text" placeholder="Nome da tarefa…"
+                   onkeydown="if(event.key==='Enter')confirmarNovaTarefa(${gi});if(event.key==='Escape')cancelarNovaTarefa(${gi})"
+                   class="flex-1 border border-marsala bg-offwhite px-3 py-1.5 text-sm text-vinho placeholder:text-vinho/30
+                          focus:outline-none rounded-sm" />
+            <button onclick="confirmarNovaTarefa(${gi})"
+                    class="px-3 py-1.5 bg-marsala text-offwhite text-xs tracking-wide uppercase rounded-sm hover:bg-marsala2 transition-colors">
+              Adicionar
+            </button>
+            <button onclick="cancelarNovaTarefa(${gi})" class="text-xs text-vinho/40 hover:text-marsala transition-colors">Cancelar</button>
+          </div>
+        </div>
+      `).join('');
+
+      atualizarProgresso();
+    }
+
+    /* Checkbox — atualiza só o label, sem re-render total */
+    function toggleTarefa(gi, ti) {
+      checklist[gi].tarefas[ti].feita = !checklist[gi].tarefas[ti].feita;
+      salvar('checklist', checklist);
+      const label = document.querySelector(`label[for="chk-${gi}-${ti}"]`);
+      if (label) {
+        const riscado = checklist[gi].tarefas[ti].feita ? 'line-through opacity-40' : '';
+        label.className = `flex-1 text-sm text-vinho cursor-pointer select-none ${riscado}`;
+      }
+      atualizarProgresso();
+    }
+
+    /* Editar nome de tarefa */
+    function editarTarefa(gi, ti) {
+      document.getElementById('cl-t-' + gi + '-' + ti).outerHTML = tarefaEdit(gi, ti);
+      const inp = document.getElementById('cl-edit-' + gi + '-' + ti);
+      inp.focus(); inp.select();
+    }
+    function confirmarEdicaoTarefa(gi, ti) {
+      const texto = document.getElementById('cl-edit-' + gi + '-' + ti).value.trim();
+      if (!texto) return;
+      checklist[gi].tarefas[ti].texto = texto;
+      salvar('checklist', checklist);
+      document.getElementById('cl-t-' + gi + '-' + ti).outerHTML = tarefaView(gi, ti);
+    }
+    function cancelarEdicaoTarefa(gi, ti) {
+      document.getElementById('cl-t-' + gi + '-' + ti).outerHTML = tarefaView(gi, ti);
+    }
+
+    /* Adicionar tarefa */
+    function mostrarAddTarefa(gi) {
+      document.getElementById('cl-add-' + gi).classList.remove('hidden');
+      document.getElementById('cl-nova-' + gi).focus();
+    }
+    function cancelarNovaTarefa(gi) {
+      document.getElementById('cl-add-' + gi).classList.add('hidden');
+      document.getElementById('cl-nova-' + gi).value = '';
+    }
+    function confirmarNovaTarefa(gi) {
+      const texto = document.getElementById('cl-nova-' + gi).value.trim();
+      if (!texto) return;
+      checklist[gi].tarefas.push({ texto, feita: false });
+      salvar('checklist', checklist);
+      renderizarChecklist();
+      mostrarAddTarefa(gi); // mantém o input aberto para adicionar mais
+    }
+
+    /* Remover tarefa */
+    function removerTarefa(gi, ti) {
+      checklist[gi].tarefas.splice(ti, 1);
+      salvar('checklist', checklist);
+      renderizarChecklist();
+    }
+
+    /* Editar nome de grupo */
+    function editarGrupo(gi) {
+      document.getElementById('cl-gtitle-' + gi).innerHTML = `
+        <input id="cl-gnome-${gi}" value="${checklist[gi].grupo.replace(/"/g,'&quot;')}"
+               onkeydown="if(event.key==='Enter')confirmarEdicaoGrupo(${gi});if(event.key==='Escape')cancelarEdicaoGrupo(${gi})"
+               class="flex-1 border border-marsala bg-offwhite px-2 py-1 font-serif text-vinho focus:outline-none rounded-sm min-w-0" />
+        <button onclick="confirmarEdicaoGrupo(${gi})"
+                class="shrink-0 w-7 h-7 flex items-center justify-center bg-marsala text-offwhite rounded-sm hover:bg-marsala2 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+        </button>
+        <button onclick="cancelarEdicaoGrupo(${gi})" class="shrink-0 text-vinho/40 hover:text-marsala text-base leading-none">✕</button>
+      `;
+      const inp = document.getElementById('cl-gnome-' + gi);
+      inp.focus(); inp.select();
+    }
+    function confirmarEdicaoGrupo(gi) {
+      const nome = document.getElementById('cl-gnome-' + gi)?.value.trim();
+      if (!nome) return;
+      checklist[gi].grupo = nome;
+      salvar('checklist', checklist);
+      renderizarChecklist();
+    }
+    function cancelarEdicaoGrupo(gi) { renderizarChecklist(); }
+
+    /* Adicionar / remover grupo */
+    function mostrarAddGrupo() {
+      document.getElementById('cl-add-grupo').classList.remove('hidden');
+      document.getElementById('cl-nome-grupo').focus();
+    }
+    function cancelarAddGrupo() {
+      document.getElementById('cl-add-grupo').classList.add('hidden');
+      document.getElementById('cl-nome-grupo').value = '';
+    }
+    function confirmarAddGrupo() {
+      const nome = document.getElementById('cl-nome-grupo').value.trim();
+      if (!nome) return;
+      checklist.push({ grupo: nome, tarefas: [] });
+      salvar('checklist', checklist);
+      cancelarAddGrupo();
+      renderizarChecklist();
+    }
+    function removerGrupo(gi) {
+      const n = checklist[gi].tarefas.length;
+      const msg = n > 0
+        ? `Remover o grupo "${checklist[gi].grupo}" e suas ${n} tarefa(s)?`
+        : `Remover o grupo "${checklist[gi].grupo}"?`;
+      if (!confirm(msg)) return;
+      checklist.splice(gi, 1);
+      salvar('checklist', checklist);
+      renderizarChecklist();
+    }
+
+    function atualizarProgresso() {
+      const todas  = checklist.flatMap(g => g.tarefas);
+      const feitas = todas.filter(t => t.feita).length;
+      const pct    = todas.length ? Math.round((feitas / todas.length) * 100) : 0;
+      document.getElementById('barra-progresso').style.width = pct + '%';
+      document.getElementById('tarefas-feitas').textContent  = feitas;
+      document.getElementById('tarefas-total').textContent   = todas.length;
+    }
+
+    /* ── ORÇAMENTO ────────────────────────────────────── */
+    let orcamento = [];
+
+    function fmtBRL(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 }); }
+
+    /* Renderiza a linha no modo visualização */
+    function linhaOrcamentoView(i) {
+      const item  = orcamento[i];
+      const saldo = item.estimado - item.pago;
+      const saldoCls = saldo > 0 ? 'text-marsala' : 'text-green-700';
+      return `<tr id="orc-row-${i}" class="hover:bg-rosa/20 transition-colors">
+        <td class="px-4 py-3 font-medium text-vinho">${item.fornecedor}</td>
+        <td class="px-4 py-3 text-vinho/60 text-xs">${item.categoria}</td>
+        <td class="px-4 py-3 text-right text-vinho">${fmtBRL(item.estimado)}</td>
+        <td class="px-4 py-3 text-right text-green-700">${fmtBRL(item.pago)}</td>
+        <td class="px-4 py-3 text-right font-medium ${saldoCls}">${fmtBRL(saldo)}</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-3">
+            <button onclick="editarOrcamento(${i})" title="Editar"
+                    class="flex items-center gap-1 text-xs text-vinho/40 hover:text-marsala transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.415.586H9v-2a2 2 0 01.586-1.414z"/>
+              </svg>
+              Editar
+            </button>
+            <button onclick="removerOrcamento(${i})" class="text-xs text-vinho/30 hover:text-red-500 transition-colors">Excluir</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    /* Renderiza a linha no modo edição */
+    function linhaOrcamentoEdit(i) {
+      const item  = orcamento[i];
+      const saldo = item.estimado - item.pago;
+      const saldoCls = saldo > 0 ? 'text-marsala' : 'text-green-700';
+      const inputCls = 'w-full border border-rosa2 bg-white px-2 py-1 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm transition-colors';
+      return `<tr id="orc-row-${i}" class="bg-rosa/25 ring-1 ring-inset ring-marsala/20">
+        <td class="px-3 py-2">
+          <input id="ei-forn-${i}" value="${item.fornecedor}" class="${inputCls}" placeholder="Fornecedor" />
+        </td>
+        <td class="px-3 py-2">
+          <input id="ei-cat-${i}"  value="${item.categoria}"  class="${inputCls}" placeholder="Categoria" />
+        </td>
+        <td class="px-3 py-2">
+          <input id="ei-est-${i}"  value="${item.estimado}" type="number" min="0" step="0.01"
+                 oninput="previewSaldo(${i})" class="${inputCls} text-right" />
+        </td>
+        <td class="px-3 py-2">
+          <input id="ei-pago-${i}" value="${item.pago}"     type="number" min="0" step="0.01"
+                 oninput="previewSaldo(${i})" class="${inputCls} text-right" />
+        </td>
+        <td id="ei-saldo-${i}" class="px-4 py-3 text-right font-medium ${saldoCls}">${fmtBRL(saldo)}</td>
+        <td class="px-3 py-2">
+          <div class="flex items-center gap-2">
+            <button onclick="confirmarEdicao(${i})"
+                    class="flex items-center gap-1 px-3 py-1.5 bg-marsala text-offwhite text-xs tracking-wide uppercase rounded-sm hover:bg-marsala2 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+              Salvar
+            </button>
+            <button onclick="cancelarEdicao(${i})" class="text-xs text-vinho/40 hover:text-marsala transition-colors">Cancelar</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    function renderizarOrcamento() {
+      document.getElementById('tabela-orcamento').innerHTML =
+        orcamento.map((_, i) => linhaOrcamentoView(i)).join('');
+      atualizarTotaisOrcamento();
+    }
+
+    function editarOrcamento(i) {
+      document.getElementById('orc-row-' + i).outerHTML = linhaOrcamentoEdit(i);
+      document.getElementById('ei-forn-' + i).focus();
+    }
+
+    function cancelarEdicao(i) {
+      document.getElementById('orc-row-' + i).outerHTML = linhaOrcamentoView(i);
+    }
+
+    function confirmarEdicao(i) {
+      const fornecedor = document.getElementById('ei-forn-' + i).value.trim();
+      const categoria  = document.getElementById('ei-cat-' + i).value.trim();
+      const estimado   = parseFloat(document.getElementById('ei-est-' + i).value)  || 0;
+      const pago       = parseFloat(document.getElementById('ei-pago-' + i).value) || 0;
+      if (!fornecedor) { document.getElementById('ei-forn-' + i).focus(); return; }
+      orcamento[i] = { fornecedor, categoria, estimado, pago };
+      salvar('orcamento', orcamento);
+      document.getElementById('orc-row-' + i).outerHTML = linhaOrcamentoView(i);
+      atualizarTotaisOrcamento();
+    }
+
+    /* Atualiza o saldo ao vivo enquanto o usuário digita */
+    function previewSaldo(i) {
+      const est  = parseFloat(document.getElementById('ei-est-' + i).value)  || 0;
+      const pago = parseFloat(document.getElementById('ei-pago-' + i).value) || 0;
+      const saldo = est - pago;
+      const el = document.getElementById('ei-saldo-' + i);
+      el.textContent  = fmtBRL(saldo);
+      el.className    = `px-4 py-3 text-right font-medium ${saldo > 0 ? 'text-marsala' : 'text-green-700'}`;
+    }
+
+    /* Atualiza cards de resumo + tfoot */
+    function atualizarTotaisOrcamento() {
+      const totEst   = orcamento.reduce((s, o) => s + Number(o.estimado), 0);
+      const totPago  = orcamento.reduce((s, o) => s + Number(o.pago),     0);
+      const totSaldo = totEst - totPago;
+      // Cards
+      document.getElementById('resumo-estimado').textContent = fmtBRL(totEst);
+      document.getElementById('resumo-pago').textContent     = fmtBRL(totPago);
+      document.getElementById('resumo-saldo').textContent    = fmtBRL(totSaldo);
+      // Rodapé da tabela
+      document.getElementById('tfoot-estimado').textContent  = fmtBRL(totEst);
+      document.getElementById('tfoot-pago').textContent      = fmtBRL(totPago);
+      const tfSaldo = document.getElementById('tfoot-saldo');
+      tfSaldo.textContent = fmtBRL(totSaldo);
+      tfSaldo.className   = `px-4 py-3 text-right ${totSaldo > 0 ? 'text-marsala' : 'text-green-700'}`;
+    }
+
+    function abrirModalOrcamento() { document.getElementById('modal-orcamento').classList.remove('hidden'); }
+
+    function salvarOrcamento() {
+      const fornecedor = document.getElementById('orc-fornecedor').value.trim();
+      const categoria  = document.getElementById('orc-categoria').value.trim();
+      const estimado   = parseFloat(document.getElementById('orc-estimado').value) || 0;
+      const pago       = parseFloat(document.getElementById('orc-pago').value)     || 0;
+      if (!fornecedor) return alert('Informe o fornecedor.');
+      orcamento.push({ fornecedor, categoria, estimado, pago });
+      salvar('orcamento', orcamento);
+      fecharModal('modal-orcamento');
+      ['orc-fornecedor','orc-categoria','orc-estimado','orc-pago'].forEach(id => document.getElementById(id).value = '');
+      renderizarOrcamento();
+    }
+
+    function removerOrcamento(i) {
+      if (confirm('Remover ' + orcamento[i].fornecedor + '?')) {
+        orcamento.splice(i, 1);
+        salvar('orcamento', orcamento);
+        renderizarOrcamento();
+      }
+    }
+
+    /* ══════════════════════════════════════════════════
+       DATA LAYER — Catálogo de Presentes
+    ══════════════════════════════════════════════════ */
+    async function db_lerCatalogo() {
+      return await apiGet('Presentes', 'presentes_catalogo', null);
+    }
+
+    async function db_salvarCatalogo(dados) {
+      await apiPost('Presentes', dados, 'presentes_catalogo');
+    }
+
+    /* ── CATÁLOGO ─────────────────────────────────────── */
+    let catalogo = [];
+    let editandoId = null;
+
+    function renderizarGerItens() {
+      const tbody = document.getElementById('tabela-catalogo');
+      document.getElementById('cat-total').textContent     = catalogo.length;
+      document.getElementById('cat-ativos').textContent    = catalogo.filter(i => i.ativo).length;
+      document.getElementById('cat-reservados').textContent = catalogo.filter(i => i.reservadoPor).length;
+
+      if (!catalogo.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-10 text-center text-vinho/40 italic text-sm">
+          Nenhum item cadastrado. Clique em "+ Adicionar" para começar.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = catalogo.map(item => {
+        const reservado = !!item.reservadoPor;
+        const imgHtml = item.imagem
+          ? `<img src="${item.imagem}" alt="${item.nome}"
+                  onerror="this.outerHTML='<div class=\\"w-12 h-12 bg-rosa/30 rounded-sm flex items-center justify-center text-xl\\">🎁</div>'"
+                  class="w-12 h-12 object-cover rounded-sm bg-rosa/20" />`
+          : `<div class="w-12 h-12 bg-rosa/30 rounded-sm flex items-center justify-center text-xl">🎁</div>`;
+
+        return `<tr class="hover:bg-rosa/10 transition-colors">
+          <td class="px-4 py-3">${imgHtml}</td>
+          <td class="px-4 py-3 max-w-xs">
+            <p class="font-medium text-sm text-vinho">${item.nome}</p>
+            <p class="text-xs text-vinho/50 mt-0.5 line-clamp-2">${item.descricao || '—'}</p>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only peer" ${item.ativo ? 'checked' : ''} onchange="toggleAtivo(${item.id})">
+              <div class="w-9 h-5 bg-rosa2 peer-checked:bg-marsala rounded-full transition-colors duration-200 relative
+                          after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
+                          after:h-4 after:w-4 after:transition-all after:duration-200 peer-checked:after:translate-x-4"></div>
+            </label>
+          </td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 text-xs rounded-full font-medium ${reservado ? 'badge-escolhido' : 'badge-disponivel'}">
+              ${reservado ? 'Reservado' : 'Disponível'}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-3">
+              <button onclick="abrirModalItem(${item.id})"
+                      class="flex items-center gap-1 text-xs text-vinho/40 hover:text-marsala transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.415.586H9v-2a2 2 0 01.586-1.414z"/>
+                </svg>Editar
+              </button>
+              <button onclick="removerItem(${item.id})" class="text-xs text-vinho/30 hover:text-red-500 transition-colors">Excluir</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderizarRecebidos() {
+      const reservados = catalogo.filter(i => i.reservadoPor);
+      const tbody = document.getElementById('tabela-recebidos');
+      document.getElementById('receb-total').textContent = reservados.length;
+
+      if (!reservados.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-10 text-center text-vinho/40 italic text-sm">
+          Nenhum presente reservado ainda.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = reservados.map(item => `
+        <tr class="hover:bg-rosa/10 transition-colors">
+          <td class="px-4 py-3 font-medium text-sm text-vinho">${item.nome}</td>
+          <td class="px-4 py-3 text-sm text-vinho/80">${item.reservadoPor.nome}</td>
+          <td class="px-4 py-3 text-sm text-vinho/70">${item.reservadoPor.whats || '—'}</td>
+          <td class="px-4 py-3 text-xs text-vinho/50">${item.reservadoPor.data}</td>
+          <td class="px-4 py-3">
+            <button onclick="liberarReserva(${item.id})"
+                    class="text-xs text-vinho/40 hover:text-marsala transition-colors">Liberar</button>
+          </td>
+        </tr>`).join('');
+    }
+
+    function abrirModalItem(id) {
+      editandoId = id || null;
+      const item = id ? catalogo.find(i => i.id === id) : null;
+      document.getElementById('item-modal-titulo').textContent = item ? 'Editar Presente' : 'Novo Presente';
+      document.getElementById('item-nome').value      = item?.nome      || '';
+      document.getElementById('item-imagem').value    = item?.imagem    || '';
+      document.getElementById('item-descricao').value = item?.descricao || '';
+      document.getElementById('item-ativo').checked   = item ? item.ativo : true;
+      fecharModal('modal-item'); // reset hidden state then show
+      document.getElementById('modal-item').classList.remove('hidden');
+      document.getElementById('item-nome').focus();
+    }
+
+    async function salvarItem() {
+      const nome      = document.getElementById('item-nome').value.trim();
+      const imagemRaw = document.getElementById('item-imagem').value.trim();
+      const descricao = document.getElementById('item-descricao').value.trim();
+      const ativo     = document.getElementById('item-ativo').checked;
+      if (!nome) { document.getElementById('item-nome').focus(); return; }
+
+      // Drive → thumbnail; link externo → mantém intacto
+      const imagem = montarUrlPresente(imagemRaw);
+
+      if (editandoId) {
+        const idx = catalogo.findIndex(i => i.id === editandoId);
+        if (idx > -1) catalogo[idx] = { ...catalogo[idx], nome, imagem, descricao, ativo };
+      } else {
+        catalogo.push({ id: Date.now(), nome, imagem, descricao, ativo, reservadoPor: null });
+      }
+
+      const btn = document.getElementById('btn-salvar-item');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
+
+      await db_salvarCatalogo(catalogo);
+
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+      fecharModal('modal-item');
+      editandoId = null;
+      renderizarGerItens();
+      renderizarRecebidos();
+    }
+
+    async function toggleAtivo(id) {
+      const item = catalogo.find(i => i.id === id);
+      if (!item) return;
+      item.ativo = !item.ativo;
+      await db_salvarCatalogo(catalogo);
+      renderizarGerItens();
+    }
+
+    async function removerItem(id) {
+      const item = catalogo.find(i => i.id === id);
+      if (!item) return;
+      const msg = item.reservadoPor
+        ? `"${item.nome}" já está reservado. Remover mesmo assim?`
+        : `Remover "${item.nome}"?`;
+      if (!confirm(msg)) return;
+      catalogo = catalogo.filter(i => i.id !== id);
+      await db_salvarCatalogo(catalogo);
+      renderizarGerItens();
+      renderizarRecebidos();
+    }
+
+    async function liberarReserva(id) {
+      const item = catalogo.find(i => i.id === id);
+      if (!item || !confirm(`Liberar a reserva de "${item.nome}"?`)) return;
+      item.reservadoPor = null;
+      await db_salvarCatalogo(catalogo);
+      renderizarGerItens();
+      renderizarRecebidos();
+    }
+
+    /* ── GALERIA DE FOTOS ────────────────────────────── */
+    let galeria = [];
+
+    /**
+     * Extrai o ID de qualquer link do Google Drive.
+     * Usa regex robusto: qualquer sequência de 25+ caracteres
+     * alfanuméricos (incluindo _ e -) é candidata a ID do Drive.
+     * Formatos reconhecidos (do mais específico ao mais genérico):
+     *   /file/d/ID/view  →  compartilhamento padrão
+     *   /file/d/ID       →  sem /view
+     *   /d/ID            →  atalho de pastas
+     *   ?id=ID &id=ID    →  open?id=, uc?id= e variações
+     *   /segmento-longo/ →  último recurso
+     * Retorna o ID limpo, ou null se não encontrar.
+     */
+    function extrairIdGDrive(url) {
+      if (!url) return null;
+      const padroes = [
+        /\/file\/d\/([a-zA-Z0-9_-]{25,})/,   // /file/d/ID (compartilhamento padrão)
+        /\/d\/([a-zA-Z0-9_-]{25,})/,          // /d/ID      (atalho de pastas)
+        /[?&]id=([a-zA-Z0-9_-]{25,})/,        // ?id= ou &id= (open?id=, uc?id=)
+        /\/([a-zA-Z0-9_-]{25,})(?:\/|$)/,     // último segmento longo no path
+      ];
+      for (const re of padroes) {
+        const m = url.match(re);
+        if (m) return m[1];
+      }
+      return null;
+    }
+
+    /**
+     * Recebe qualquer link do Google Drive e devolve o URL de
+     * thumbnail pronto para ser usado em <img src="…">.
+     * Retorna null quando o link não é reconhecido como Drive.
+     */
+    function montarUrlDireta(url) {
+      const id = extrairIdGDrive(url);
+      if (!id) return null;
+      return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w1000';
+    }
+
+    /**
+     * Processa a URL de imagem de um presente antes de salvar:
+     *   • Link do Google Drive  →  converte para thumbnail (sz=w1000)
+     *   • Link externo comum    →  mantém intacto
+     *   • Vazio                 →  retorna vazio
+     */
+    function montarUrlPresente(url) {
+      if (!url) return '';
+      if (url.includes('thumbnail?id=')) return url;   // já no formato correto
+      const id = extrairIdGDrive(url);
+      if (id) return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w1000';
+      return url;   // link externo — mantém original
+    }
+
+    function adicionarFoto() {
+      const input   = document.getElementById('gal-url');
+      const legenda = document.getElementById('gal-legenda').value.trim();
+      const raw     = input.value.trim();
+
+      if (!raw) { input.focus(); return; }
+
+      const urlDireta = montarUrlDireta(raw);
+      if (!urlDireta) {
+        input.style.borderColor = '#8E3B46';
+        input.title = 'Link do Google Drive não reconhecido. Certifique-se de copiar o link de compartilhamento.';
+        setTimeout(() => { input.style.borderColor = ''; input.title = ''; }, 2500);
+        input.focus();
+        return;
+      }
+
+      // Salva já no formato direto — sem necessidade de converter depois
+      galeria.push({ id: Date.now(), url: urlDireta, legenda });
+      salvar('galeria_fotos', galeria);
+      input.value = '';
+      document.getElementById('gal-legenda').value = '';
+      renderizarGaleriaPainel();
+    }
+
+    function removerFoto(id) {
+      // Converte para número — seguro mesmo vindos de atributo HTML
+      const idNum = Number(id);
+      const idx   = galeria.findIndex(f => Number(f.id) === idNum);
+      if (idx === -1) return;
+      if (!confirm('Remover "' + (galeria[idx].legenda || 'esta foto') + '" da galeria?')) return;
+      galeria.splice(idx, 1);
+      salvar('galeria_fotos', galeria);
+      renderizarGaleriaPainel();
+    }
+
+    function renderizarGaleriaPainel() {
+      document.getElementById('galeria-total').textContent = galeria.length;
+      const lista = document.getElementById('galeria-lista-painel');
+      const vazia = document.getElementById('galeria-vazia-painel');
+
+      if (!galeria.length) {
+        lista.innerHTML = '';
+        vazia.classList.remove('hidden');
+        return;
+      }
+
+      vazia.classList.add('hidden');
+      lista.innerHTML = galeria.map(foto => {
+        const preview  = foto.url;   // já salvo no formato direto uc?export=view
+        const legTxt   = foto.legenda
+          ? `<p class="text-sm text-vinho font-medium truncate mt-0.5">${foto.legenda}</p>`
+          : `<p class="text-xs text-vinho/30 italic mt-0.5">Sem legenda</p>`;
+        return `
+          <div class="bg-white border border-rosa2/40 rounded-sm p-4 flex items-center gap-4 group">
+            <!-- Miniatura -->
+            <div class="w-16 h-16 rounded-sm overflow-hidden shrink-0 bg-rosa/40 border border-rosa2/40
+                        flex items-center justify-center text-2xl">
+              <img src="${preview}" alt="${foto.legenda || 'Foto'}" loading="lazy"
+                   class="w-full h-full object-cover"
+                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+              <span style="display:none" class="items-center justify-center w-full h-full text-2xl">🖼️</span>
+            </div>
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-vinho/40 font-mono truncate">${foto.url}</p>
+              ${legTxt}
+            </div>
+            <!-- Ação -->
+            <button onclick="removerFoto(${foto.id})"
+                    class="shrink-0 text-xs text-vinho/40 hover:text-red-600 active:scale-95
+                           transition-all tracking-wide uppercase border border-rosa2/50
+                           hover:border-red-300 px-2 py-1 rounded-sm">
+              Excluir
+            </button>
+          </div>`;
+      }).join('');
+    }
+
+    /* ── UTILITÁRIOS ──────────────────────────────────── */
+    function fecharModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // Fecha modal clicando fora
+    ['modal-convidado','modal-orcamento','modal-item'].forEach(id => {
+      document.getElementById(id).addEventListener('click', function(e) {
+        if (e.target === this) fecharModal(id);
+      });
+    });
+
+    /* ── INBOX DE RSVP (vindos do site) ─────────────────── */
+    async function carregarInbox() {
+      const pendentes = await apiGet('RSVP', 'rsvp_pendentes', []);
+      const badge     = document.getElementById('badge-rsvp');
+      const inbox     = document.getElementById('rsvp-inbox');
+      const lista     = document.getElementById('rsvp-inbox-lista');
+      const count     = document.getElementById('rsvp-inbox-count');
+
+      if (pendentes.length === 0) {
+        inbox.classList.add('hidden');
+        badge.classList.add('hidden');
+        return;
+      }
+
+      badge.textContent = pendentes.length;
+      badge.classList.remove('hidden');
+      count.textContent = pendentes.length;
+      inbox.classList.remove('hidden');
+
+      lista.innerHTML = pendentes.map((r, i) => {
+        const acompTxt = r.acompanhantes && r.acompanhantes.length
+          ? r.acompanhantes.join(', ')
+          : 'Nenhum';
+        const badgeCls = r.status === 'Confirmado' ? 'badge-confirmado' : 'badge-recusado';
+        return `
+          <div class="bg-white border border-rosa2/40 rounded-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div class="flex-1 flex flex-col gap-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-medium text-sm text-vinho">${r.nome}</span>
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium ${badgeCls}">${r.status}</span>
+              </div>
+              ${r.whats ? `<span class="text-xs text-vinho/50">📱 ${r.whats}</span>` : ''}
+              <span class="text-xs text-vinho/50">
+                Acompanhantes: <span class="text-vinho/70">${acompTxt}</span>
+                ${r.acompanhantes && r.acompanhantes.length ? `(+${r.acompanhantes.length})` : ''}
+              </span>
+              <span class="text-xs text-vinho/30">${r.dataEnvio}</span>
+            </div>
+            <div class="flex gap-2 shrink-0">
+              <button onclick="importarRSVP(${i})"
+                      class="px-3 py-1.5 bg-marsala text-offwhite text-xs tracking-wide uppercase rounded-sm hover:bg-marsala2 transition-colors">
+                Adicionar à lista
+              </button>
+              <button onclick="dispensarRSVP(${i})"
+                      class="px-3 py-1.5 border border-rosa2 text-vinho/50 text-xs tracking-wide uppercase rounded-sm hover:border-marsala hover:text-marsala transition-colors">
+                Ignorar
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    async function importarRSVP(i) {
+      const pendentes = await apiGet('RSVP', 'rsvp_pendentes', []);
+      const r = pendentes[i];
+
+      // Adiciona o convidado principal
+      convidados.push({ nome: r.nome, whats: r.whats || '', acomp: r.acompanhantes.join(', '), status: r.status });
+
+      // Adiciona cada acompanhante como convidado separado
+      (r.acompanhantes || []).forEach(nome => {
+        convidados.push({ nome, whats: '', acomp: '', status: r.status });
+      });
+
+      salvar('convidados', convidados);
+
+      // Remove da fila
+      pendentes.splice(i, 1);
+      await apiPost('RSVP', pendentes, 'rsvp_pendentes');
+
+      renderizarConvidados();
+      carregarInbox();
+    }
+
+    async function dispensarRSVP(i) {
+      const pendentes = await apiGet('RSVP', 'rsvp_pendentes', []);
+      pendentes.splice(i, 1);
+      await apiPost('RSVP', pendentes, 'rsvp_pendentes');
+      carregarInbox();
+    }
+
+    async function dispensarTodas() {
+      if (confirm('Dispensar todas as confirmações pendentes sem adicionar à lista?')) {
+        await apiPost('RSVP', [], 'rsvp_pendentes');
+        carregarInbox();
+      }
+    }
+
+    /* ── INICIALIZAÇÃO ────────────────────────────────── */
+    async function inicializar() {
+      // Carrega dados (ou usa os dados de exemplo na primeira vez)
+      convidados = carregar('convidados', convidadosPadrao);
+      checklist  = carregar('checklist',  checklistPadrao);
+      orcamento  = carregar('orcamento',  orcamentoPadrao);
+
+      const dadosCatalogo = await db_lerCatalogo();
+      catalogo = dadosCatalogo !== null ? dadosCatalogo : catalogoPadrao.slice();
+      if (dadosCatalogo === null) await db_salvarCatalogo(catalogo);
+
+      galeria = carregar('galeria_fotos', []);
+
+      renderizarConvidados();
+      renderizarChecklist();
+      renderizarOrcamento();
+      renderizarGerItens();
+      renderizarRecebidos();
+      renderizarGaleriaPainel();
+      await carregarInbox();
+      await carregarTextoHistoria();
+      await carregarConfiguracoes();
+
+      mudarAba('convidados');
+    }
+
+    /* ── CONFIGURAÇÕES GERAIS ─────────────────────────── */
+    async function carregarConfiguracoes() {
+      const cfg = await apiGet('Configuracoes', 'configuracoes_site', {});
+      document.getElementById('cfg-noivo').value      = cfg.noivo    || '';
+      document.getElementById('cfg-noiva').value      = cfg.noiva    || '';
+      document.getElementById('cfg-iniciais').value   = cfg.iniciais || '';
+      document.getElementById('cfg-data').value       = cfg.data     || '';
+      document.getElementById('cfg-senha').value        = cfg.senha       || '';
+      document.getElementById('cfg-senha-noivos').value = cfg.senhaNoivos || '';
+      document.getElementById('cfg-cor-marsala').value = cfg.corMarsala || '#8E3B46';
+      document.getElementById('cfg-cor-rosa').value   = cfg.corRosa  || '#F5D0D8';
+    }
+
+    async function salvarConfiguracoes(btn) {
+      var cfg = {
+        noivo:      document.getElementById('cfg-noivo').value.trim()    || 'Elyabe',
+        noiva:      document.getElementById('cfg-noiva').value.trim()    || 'Raianny',
+        iniciais:   document.getElementById('cfg-iniciais').value.trim() || 'E & R',
+        data:       document.getElementById('cfg-data').value            || '2027-09-18',
+        senha:       document.getElementById('cfg-senha').value.trim()        || 'Casamento2026',
+        senhaNoivos: document.getElementById('cfg-senha-noivos').value.trim() || 'noivos2027',
+        corMarsala: document.getElementById('cfg-cor-marsala').value,
+        corRosa:    document.getElementById('cfg-cor-rosa').value,
+      };
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
+      await apiPost('Configuracoes', cfg, 'configuracoes_site');
+      btn.textContent = 'Salvo ✓';
+      setTimeout(function() { btn.textContent = 'Salvar Configurações'; btn.disabled = false; }, 2000);
+    }
+
+    /* ── NOSSA HISTÓRIA ───────────────────────────────── */
+    async function carregarTextoHistoria() {
+      const texto = await apiGet('Historia', 'texto_nossa_historia', '');
+      document.getElementById('historia-texto-painel').value = texto || '';
+    }
+
+    async function salvarTextoHistoria(btn) {
+      const texto = document.getElementById('historia-texto-painel').value;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
+      await apiPost('Historia', texto, 'texto_nossa_historia');
+      btn.textContent = 'Salvo ✓';
+      setTimeout(() => { btn.textContent = 'Salvar Texto'; btn.disabled = false; }, 2000);
+    }
+
+    // Já autenticado na mesma sessão → inicializa ao carregar
+    if (sessionStorage.getItem('autenticado') === '1') {
+      document.addEventListener('DOMContentLoaded', inicializar);
+    }
+  </script>
+
+</body>
+</html>
