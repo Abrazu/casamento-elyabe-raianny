@@ -771,7 +771,7 @@
         return raw ? JSON.parse(raw) : padrao;
       }
       try {
-        const res  = await fetch(API_URL + '?sheet=' + encodeURIComponent(sheet));
+        const res  = await fetch(API_URL + '?aba=' + encodeURIComponent(sheet));
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         const json = JSON.parse(text);
