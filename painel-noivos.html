@@ -789,12 +789,11 @@
       }
       if (!API_URL) return true;
       try {
-        const body = JSON.stringify({ sheet, data, modo });
+        const body = JSON.stringify({ aba: sheet, data, modo });
         const res  = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
-        const json = JSON.parse(text);
-        if (!json.ok) throw new Error(json.erro || 'Resposta não-ok da API');
+        if (text.toLowerCase().startsWith('erro')) throw new Error(text);
         return true;
       } catch (err) {
         console.warn('[API] POST "' + sheet + '" falhou:', err.message);
