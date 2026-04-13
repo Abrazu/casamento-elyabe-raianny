@@ -677,10 +677,17 @@
       }
       if (!API_URL) return true;
       try {
-        const payload = { sheet: sheet, data: data, modo: modo };
-        const body = JSON.stringify(payload);
-        console.log('Enviando para o Google:', payload);
-        const res  = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+        // Monta o pacote plano: campos do objeto espalhados na raiz
+        var pacote;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          pacote = Object.assign({ aba: sheet }, data);
+        } else {
+          pacote = { aba: sheet, data: data };
+        }
+        if (modo !== 'replace') pacote.modo = modo;
+        var body = JSON.stringify(pacote);
+        console.log('Enviando para o Google:', pacote);
+        const res  = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         if (text.toLowerCase().startsWith('erro')) throw new Error(text);
