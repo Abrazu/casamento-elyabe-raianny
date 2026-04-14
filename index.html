@@ -654,10 +654,8 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         const json = JSON.parse(text);
-        if (json.ok && json.data !== null) {
-          localStorage.setItem(localKey, JSON.stringify(json.data));
-          return json.data;
-        }
+        localStorage.setItem(localKey, JSON.stringify(json));
+        return json;
       } catch (err) {
         console.warn('[API] GET "' + sheet + '" falhou — usando cache local:', err.message);
       }
@@ -1354,7 +1352,15 @@
   ════════════════════════════════════════════ -->
   <script>
     document.addEventListener('DOMContentLoaded', async function () {
-      const texto = await apiGet('Historia', 'texto_nossa_historia', '');
+      var dados = await apiGet('Historia', 'texto_nossa_historia', '');
+      var texto = '';
+      if (Array.isArray(dados) && dados.length > 0) {
+        texto = dados[0].Texto || dados[0].texto || '';
+      } else if (dados && typeof dados === 'object' && !Array.isArray(dados)) {
+        texto = dados.Texto || dados.texto || '';
+      } else if (typeof dados === 'string') {
+        texto = dados;
+      }
       if (texto && texto.trim()) {
         document.getElementById('historia-texto-dinamico').textContent = texto.trim();
       }
