@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,26 +9,31 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400&display=swap"
+    rel="stylesheet" />
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            marsala:  'rgb(var(--color-marsala-rgb) / <alpha-value>)',
+            marsala: 'rgb(var(--color-marsala-rgb) / <alpha-value>)',
             marsala2: 'rgb(var(--color-marsala2-rgb) / <alpha-value>)',
-            rosa:     'rgb(var(--color-rosa-rgb) / <alpha-value>)',
-            rosa2:    'rgb(var(--color-rosa2-rgb) / <alpha-value>)',
+            rosa: 'rgb(var(--color-rosa-rgb) / <alpha-value>)',
+            rosa2: 'rgb(var(--color-rosa2-rgb) / <alpha-value>)',
             offwhite: '#FFF8F9',
-            vinho:    '#3D1F25',
+            vinho: '#3D1F25',
           },
           fontFamily: {
             serif: ['"Playfair Display"', 'Georgia', 'serif'],
-            sans:  ['Lato', 'sans-serif'],
+            sans: ['Lato', 'sans-serif'],
           },
         },
       },
@@ -41,56 +47,68 @@
        rgb(var(--color-*-rgb)) e se atualizam automaticamente.
   ════════════════════════════════════════════════════ -->
   <script>
-    (function () {
-      function hexRgb(hex) {
-        if (!hex || hex.length < 7) return null;
-        return parseInt(hex.slice(1,3),16) + ' ' + parseInt(hex.slice(3,5),16) + ' ' + parseInt(hex.slice(5,7),16);
-      }
-      function escurecer(hex, amt) {
-        if (!hex || hex.length < 7) return null;
-        return Math.max(0,parseInt(hex.slice(1,3),16)-amt) + ' '
-             + Math.max(0,parseInt(hex.slice(3,5),16)-amt) + ' '
-             + Math.max(0,parseInt(hex.slice(5,7),16)-amt);
-      }
-      var cfg = {};
-      try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch(e) {}
-      var r = document.documentElement;
-      if (cfg.corMarsala) {
-        var m = hexRgb(cfg.corMarsala);
-        if (m) { r.style.setProperty('--color-marsala-rgb', m);
-                 r.style.setProperty('--color-marsala2-rgb', escurecer(cfg.corMarsala, 30)); }
-      }
-      if (cfg.corRosa) {
-        var ro = hexRgb(cfg.corRosa);
-        if (ro) { r.style.setProperty('--color-rosa-rgb', ro);
-                  r.style.setProperty('--color-rosa2-rgb', escurecer(cfg.corRosa, 13)); }
-      }
-    })();
+      (function () {
+        function hexRgb(hex) {
+          if (!hex || hex.length < 7) return null;
+          return parseInt(hex.slice(1, 3), 16) + ' ' + parseInt(hex.slice(3, 5), 16) + ' ' + parseInt(hex.slice(5, 7), 16);
+        }
+        function escurecer(hex, amt) {
+          if (!hex || hex.length < 7) return null;
+          return Math.max(0, parseInt(hex.slice(1, 3), 16) - amt) + ' '
+            + Math.max(0, parseInt(hex.slice(3, 5), 16) - amt) + ' '
+            + Math.max(0, parseInt(hex.slice(5, 7), 16) - amt);
+        }
+        var cfg = {};
+        try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
+        var r = document.documentElement;
+        if (cfg.cor_marsala) {
+          var m = hexRgb(cfg.cor_marsala);
+          if (m) {
+            r.style.setProperty('--color-marsala-rgb', m);
+            r.style.setProperty('--color-marsala2-rgb', escurecer(cfg.cor_marsala, 30));
+          }
+        }
+        if (cfg.cor_rosa) {
+          var ro = hexRgb(cfg.cor_rosa);
+          if (ro) {
+            r.style.setProperty('--color-rosa-rgb', ro);
+            r.style.setProperty('--color-rosa2-rgb', escurecer(cfg.cor_rosa, 13));
+          }
+        }
+      })();
   </script>
 
   <!-- Cores dinâmicas — substituídas pelo script acima se configuradas no painel -->
   <style>
     :root {
-      --color-marsala-rgb:  142 59 70;
+      --color-marsala-rgb: 142 59 70;
       --color-marsala2-rgb: 110 45 55;
-      --color-rosa-rgb:     245 208 216;
-      --color-rosa2-rgb:    232 180 190;
+      --color-rosa-rgb: 245 208 216;
+      --color-rosa2-rgb: 232 180 190;
     }
 
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+    }
 
     /* ── Lock screen ── */
-    body.bloqueado { overflow: hidden; }
+    body.bloqueado {
+      overflow: hidden;
+    }
 
     #lock-screen {
       transition: opacity .5s ease, visibility .5s ease;
     }
+
     #lock-screen.saindo {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
     }
-    #lock-input::placeholder { letter-spacing: .25em; }
+
+    #lock-input::placeholder {
+      letter-spacing: .25em;
+    }
 
     .divider {
       display: flex;
@@ -98,6 +116,7 @@
       gap: 1rem;
       justify-content: center;
     }
+
     .divider::before,
     .divider::after {
       content: '';
@@ -113,28 +132,39 @@
       column-count: 2;
       column-gap: 10px;
     }
-    @media (min-width: 640px)  { .galeria-masonry { column-count: 3; } }
-    @media (min-width: 1024px) { .galeria-masonry { column-count: 4; } }
+
+    @media (min-width: 640px) {
+      .galeria-masonry {
+        column-count: 3;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .galeria-masonry {
+        column-count: 4;
+      }
+    }
 
     .galeria-masonry-item {
       break-inside: avoid;
       margin-bottom: 10px;
       border-radius: 10px;
       overflow: hidden;
-      border: 1.5px solid rgba(142,59,70,.3);
+      border: 1.5px solid rgba(142, 59, 70, .3);
       transition: border-color .3s ease, box-shadow .3s ease;
       background: #FFF8F9;
     }
+
     .galeria-masonry-item:hover {
       border-color: #8E3B46;
-      box-shadow: 0 4px 20px rgba(142,59,70,.18);
+      box-shadow: 0 4px 20px rgba(142, 59, 70, .18);
     }
 
     /* Wrapper da imagem — nunca colapsa, mesmo antes do load */
     .gal-img-wrap {
       position: relative;
       min-height: 200px;
-      background: rgba(245,208,216,.25);
+      background: rgba(245, 208, 216, .25);
       overflow: hidden;
     }
 
@@ -159,9 +189,11 @@
       opacity: 0;
       transition: opacity .4s ease, transform .5s ease;
     }
+
     .galeria-masonry-item img.gal-ok {
       opacity: 1;
     }
+
     .galeria-masonry-item:hover img.gal-ok {
       transform: scale(1.06);
     }
@@ -172,13 +204,20 @@
       font-size: 11px;
       letter-spacing: .04em;
       color: #3D1F25;
-      background: rgba(245,208,216,.6);
+      background: rgba(245, 208, 216, .6);
       font-family: 'Lato', sans-serif;
     }
-    @keyframes btn-spin { to { transform: rotate(360deg); } }
+
+    @keyframes btn-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .btn-spinner {
       display: inline-block;
-      width: 14px; height: 14px;
+      width: 14px;
+      height: 14px;
       border: 2px solid currentColor;
       border-top-color: transparent;
       border-radius: 50%;
@@ -195,22 +234,23 @@
        LOCK SCREEN
   ════════════════════════════════════════════ -->
   <div id="lock-screen" class="fixed inset-0 z-[999] flex items-center justify-center px-6 overflow-hidden"
-       style="background-color:rgb(var(--color-marsala-rgb));">
+    style="background-color:rgb(var(--color-marsala-rgb));">
 
     <!-- Blobs decorativos -->
     <div class="absolute -top-40 -left-40 w-[28rem] h-[28rem] rounded-full blur-3xl pointer-events-none"
-         style="background:rgb(var(--color-marsala2-rgb)); opacity:.55;"></div>
+      style="background:rgb(var(--color-marsala2-rgb)); opacity:.55;"></div>
     <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full blur-3xl pointer-events-none"
-         style="background:rgb(var(--color-rosa-rgb)); opacity:.12;"></div>
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[36rem] h-[36rem] rounded-full blur-3xl pointer-events-none"
-         style="background:rgb(var(--color-marsala2-rgb)); opacity:.35;"></div>
+      style="background:rgb(var(--color-rosa-rgb)); opacity:.12;"></div>
+    <div
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[36rem] h-[36rem] rounded-full blur-3xl pointer-events-none"
+      style="background:rgb(var(--color-marsala2-rgb)); opacity:.35;"></div>
 
     <!-- Conteúdo central -->
     <div class="relative z-10 flex flex-col items-center gap-8 w-full max-w-xs text-center">
 
       <!-- Ornamento superior -->
-      <p class="text-xs tracking-[0.45em] uppercase font-sans"
-         style="color:rgba(245,208,216,.5);">Bem-vindo ao nosso site</p>
+      <p class="text-xs tracking-[0.45em] uppercase font-sans" style="color:rgba(245,208,216,.5);">Bem-vindo ao nosso
+        site</p>
 
       <!-- Nomes -->
       <div class="flex flex-col items-center gap-1">
@@ -224,8 +264,8 @@
       </div>
 
       <!-- Data -->
-      <p id="lock-data" class="text-xs tracking-[0.35em] uppercase font-sans"
-         style="color:rgba(245,208,216,.45);">18 · 09 · 2027</p>
+      <p id="lock-data" class="text-xs tracking-[0.35em] uppercase font-sans" style="color:rgba(245,208,216,.45);">18 ·
+        09 · 2027</p>
 
       <!-- Divisor -->
       <div class="flex items-center gap-3 w-full" style="color:rgba(245,208,216,.25);">
@@ -236,25 +276,23 @@
 
       <!-- Formulário de senha -->
       <div class="w-full flex flex-col gap-3">
-        <label class="text-xs tracking-[0.3em] uppercase font-sans"
-               style="color:rgba(245,208,216,.55);">Senha dos Convidados</label>
+        <label class="text-xs tracking-[0.3em] uppercase font-sans" style="color:rgba(245,208,216,.55);">Senha dos
+          Convidados</label>
 
-        <input id="lock-input" type="password" autocomplete="current-password"
-               placeholder="············"
-               onkeydown="if(event.key==='Enter')verificarLock()"
-               class="w-full px-4 py-3 text-sm text-center rounded-sm focus:outline-none transition-all duration-200 font-sans"
-               style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+        <input id="lock-input" type="password" autocomplete="current-password" placeholder="············"
+          onkeydown="if(event.key==='Enter')verificarLock()"
+          class="w-full px-4 py-3 text-sm text-center rounded-sm focus:outline-none transition-all duration-200 font-sans"
+          style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
                       color:#FFF8F9; letter-spacing:.2em;" />
 
-        <p id="lock-erro"
-           class="hidden text-xs italic font-sans"
-           style="color:rgba(245,208,216,.7);">Senha incorreta. Tente novamente.</p>
+        <p id="lock-erro" class="hidden text-xs italic font-sans" style="color:rgba(245,208,216,.7);">Senha incorreta.
+          Tente novamente.</p>
 
         <button onclick="verificarLock()"
-                class="w-full py-3 rounded-sm text-xs tracking-[0.35em] uppercase font-sans transition-all duration-200"
-                style="background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); color:#FFF8F9;"
-                onmouseover="this.style.background='rgba(255,255,255,.22)'"
-                onmouseout="this.style.background='rgba(255,255,255,.12)'">
+          class="w-full py-3 rounded-sm text-xs tracking-[0.35em] uppercase font-sans transition-all duration-200"
+          style="background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); color:#FFF8F9;"
+          onmouseover="this.style.background='rgba(255,255,255,.22)'"
+          onmouseout="this.style.background='rgba(255,255,255,.12)'">
           Entrar
         </button>
       </div>
@@ -277,16 +315,18 @@
     <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
       <span id="site-iniciais" class="font-serif text-lg tracking-widest text-marsala">E & R</span>
       <ul class="hidden sm:flex gap-8 text-sm tracking-widest uppercase text-vinho/70 font-sans">
-        <li><a href="#hero"      class="hover:text-marsala transition-colors">Início</a></li>
+        <li><a href="#hero" class="hover:text-marsala transition-colors">Início</a></li>
         <li><a href="#historia" class="hover:text-marsala transition-colors">Nossa História</a></li>
         <li><a href="#presentes" class="hover:text-marsala transition-colors">Presentes</a></li>
-        <li><a href="#rsvp"     class="hover:text-marsala transition-colors">Presença</a></li>
-        <li><a href="#mural"   class="hover:text-marsala transition-colors">Fotos</a></li>
+        <li><a href="#rsvp" class="hover:text-marsala transition-colors">Presença</a></li>
+        <li><a href="#mural" class="hover:text-marsala transition-colors">Fotos</a></li>
       </ul>
       <a href="painel-noivos.html" title="Painel dos Noivos"
-         class="text-vinho/25 hover:text-marsala transition-colors duration-200 ml-4">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75A4.5 4.5 0 008 6.75v3.75m-.75 0h10.5A1.5 1.5 0 0119.5 12v7.5A1.5 1.5 0 0118 21H6a1.5 1.5 0 01-1.5-1.5V12A1.5 1.5 0 016 10.5z" />
+        class="text-vinho/25 hover:text-marsala transition-colors duration-200 ml-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+          stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M16.5 10.5V6.75A4.5 4.5 0 008 6.75v3.75m-.75 0h10.5A1.5 1.5 0 0119.5 12v7.5A1.5 1.5 0 0118 21H6a1.5 1.5 0 01-1.5-1.5V12A1.5 1.5 0 016 10.5z" />
         </svg>
       </a>
     </div>
@@ -295,11 +335,14 @@
   <!-- ═══════════════════════════════════════════
        HERO
   ════════════════════════════════════════════ -->
-  <section id="hero" class="relative min-h-screen flex flex-col items-center justify-center text-center px-6 overflow-hidden bg-offwhite">
+  <section id="hero"
+    class="relative min-h-screen flex flex-col items-center justify-center text-center px-6 overflow-hidden bg-offwhite">
 
     <!-- Fundo decorativo — círculos suaves -->
     <div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-rosa opacity-50 blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-marsala opacity-15 blur-3xl pointer-events-none"></div>
+    <div
+      class="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-marsala opacity-15 blur-3xl pointer-events-none">
+    </div>
 
     <!-- Conteúdo -->
     <div class="relative z-10 flex flex-col items-center gap-6 max-w-2xl">
@@ -309,8 +352,8 @@
 
       <!-- Nomes -->
       <h1 class="font-serif text-6xl sm:text-8xl leading-tight text-vinho">
-        <span id="hero-noivo">Elyabe</span><br/>
-        <span class="italic text-marsala">&amp;</span><br/>
+        <span id="hero-noivo">Elyabe</span><br />
+        <span class="italic text-marsala">&amp;</span><br />
         <span id="hero-noiva">Raianny</span>
       </h1>
 
@@ -327,26 +370,25 @@
       <!-- Contagem regressiva -->
       <div class="flex gap-6 mt-2">
         <div class="flex flex-col items-center">
-          <span id="days"   class="font-serif text-3xl text-marsala">—</span>
+          <span id="days" class="font-serif text-3xl text-marsala">—</span>
           <span class="text-xs tracking-widest uppercase text-vinho/50 mt-1">Dias</span>
         </div>
         <div class="flex flex-col items-center">
-          <span id="hours"  class="font-serif text-3xl text-marsala">—</span>
+          <span id="hours" class="font-serif text-3xl text-marsala">—</span>
           <span class="text-xs tracking-widest uppercase text-vinho/50 mt-1">Horas</span>
         </div>
         <div class="flex flex-col items-center">
-          <span id="mins"   class="font-serif text-3xl text-marsala">—</span>
+          <span id="mins" class="font-serif text-3xl text-marsala">—</span>
           <span class="text-xs tracking-widest uppercase text-vinho/50 mt-1">Min</span>
         </div>
         <div class="flex flex-col items-center">
-          <span id="secs"   class="font-serif text-3xl text-marsala">—</span>
+          <span id="secs" class="font-serif text-3xl text-marsala">—</span>
           <span class="text-xs tracking-widest uppercase text-vinho/50 mt-1">Seg</span>
         </div>
       </div>
 
       <!-- CTA -->
-      <a href="#rsvp"
-         class="mt-4 px-10 py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase font-sans
+      <a href="#rsvp" class="mt-4 px-10 py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase font-sans
                 hover:bg-marsala2 active:scale-95 transition-all duration-200 rounded-sm shadow-md">
         Confirmar Presença
       </a>
@@ -373,7 +415,7 @@
           <span class="text-marsala text-lg">✦</span>
         </div>
         <p id="historia-texto-dinamico"
-           class="font-sans font-light text-vinho/60 italic text-lg leading-relaxed whitespace-pre-line">
+          class="font-sans font-light text-vinho/60 italic text-lg leading-relaxed whitespace-pre-line">
           Em breve, contaremos como tudo começou…
         </p>
       </div>
@@ -433,22 +475,19 @@
 
         <div>
           <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Nome completo *</label>
-          <input id="rsvp-nome" type="text" placeholder="Seu nome completo" required
-                 class="w-full border border-rosa2 bg-offwhite px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
+          <input id="rsvp-nome" type="text" placeholder="Seu nome completo" required class="w-full border border-rosa2 bg-offwhite px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
                         focus:outline-none focus:border-marsala transition-colors rounded-sm" />
         </div>
 
         <div>
           <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">WhatsApp</label>
-          <input id="rsvp-whats" type="tel" placeholder="(00) 00000-0000"
-                 class="w-full border border-rosa2 bg-offwhite px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
+          <input id="rsvp-whats" type="tel" placeholder="(00) 00000-0000" class="w-full border border-rosa2 bg-offwhite px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
                         focus:outline-none focus:border-marsala transition-colors rounded-sm" />
         </div>
 
         <div>
           <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Você comparecerá? *</label>
-          <select id="rsvp-status" required onchange="mostrarAcompanhantes()"
-                  class="w-full border border-rosa2 bg-offwhite px-4 py-3 text-sm text-vinho
+          <select id="rsvp-status" required onchange="mostrarAcompanhantes()" class="w-full border border-rosa2 bg-offwhite px-4 py-3 text-sm text-vinho
                          focus:outline-none focus:border-marsala transition-colors rounded-sm">
             <option value="">Selecione…</option>
             <option value="Confirmado">Sim, estarei lá!</option>
@@ -457,7 +496,8 @@
         </div>
 
         <!-- Seção de acompanhantes — aparece só quando confirmar presença -->
-        <div id="rsvp-acomp-section" class="hidden flex flex-col gap-4 border border-rosa2/50 rounded-sm p-4 bg-rosa/20">
+        <div id="rsvp-acomp-section"
+          class="hidden flex flex-col gap-4 border border-rosa2/50 rounded-sm p-4 bg-rosa/20">
           <div>
             <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-3">
               Acompanhantes <span class="normal-case text-vinho/40">(máximo 6)</span>
@@ -465,11 +505,11 @@
             <!-- Contador +/- -->
             <div class="flex items-center gap-4">
               <button type="button" onclick="ajustarAcomp(-1)"
-                      class="w-8 h-8 rounded-full border border-rosa2 text-marsala text-lg leading-none
+                class="w-8 h-8 rounded-full border border-rosa2 text-marsala text-lg leading-none
                              hover:bg-rosa hover:border-marsala transition-colors flex items-center justify-center">−</button>
               <span id="rsvp-num-acomp" class="font-serif text-2xl text-marsala w-4 text-center">0</span>
               <button type="button" onclick="ajustarAcomp(1)"
-                      class="w-8 h-8 rounded-full border border-rosa2 text-marsala text-lg leading-none
+                class="w-8 h-8 rounded-full border border-rosa2 text-marsala text-lg leading-none
                              hover:bg-rosa hover:border-marsala transition-colors flex items-center justify-center">+</button>
               <span class="text-xs text-vinho/40 ml-1">pessoa(s) além de você</span>
             </div>
@@ -478,8 +518,7 @@
           <div id="rsvp-campos-acomp" class="flex flex-col gap-3"></div>
         </div>
 
-        <button id="rsvp-submit-btn" type="submit"
-                class="mt-2 w-full py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase
+        <button id="rsvp-submit-btn" type="submit" class="mt-2 w-full py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase
                        hover:bg-marsala2 active:scale-95 transition-all duration-200 rounded-sm shadow-md">
           Enviar confirmação
         </button>
@@ -490,10 +529,9 @@
         <div class="w-14 h-14 rounded-full bg-rosa flex items-center justify-center text-marsala text-2xl">✦</div>
         <h3 class="font-serif text-2xl text-vinho">Recebemos sua confirmação!</h3>
         <p class="text-sm text-vinho/60 leading-relaxed">
-          Obrigado por responder. <br/>Mal podemos esperar para celebrar com você!
+          Obrigado por responder. <br />Mal podemos esperar para celebrar com você!
         </p>
-        <button onclick="novaResposta()"
-                class="mt-2 px-6 py-2 border border-rosa2 text-xs uppercase tracking-widest text-vinho/50
+        <button onclick="novaResposta()" class="mt-2 px-6 py-2 border border-rosa2 text-xs uppercase tracking-widest text-vinho/50
                        hover:border-marsala hover:text-marsala transition-colors rounded-sm">
           Enviar outra resposta
         </button>
@@ -523,14 +561,13 @@
       <!-- Botão de envio centralizado -->
       <div class="flex flex-col items-center gap-5">
         <a href="https://docs.google.com/forms/d/e/1FAIpQLSdEN2RHt4naNsltSXdXhTQh3hjEiRxh4O6EM0tU_XP3gcHfcg/viewform?usp=dialog"
-           target="_blank" rel="noopener"
-           class="flex flex-col items-center justify-center gap-3 px-16 py-8 bg-marsala text-offwhite
+          target="_blank" rel="noopener" class="flex flex-col items-center justify-center gap-3 px-16 py-8 bg-marsala text-offwhite
                   rounded-sm shadow-lg hover:bg-marsala2 active:scale-95 transition-all duration-200">
           <!-- Ícone câmera -->
           <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-90" fill="none" viewBox="0 0 24 24"
-               stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-            <circle cx="12" cy="13" r="4"/>
+            stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+            <circle cx="12" cy="13" r="4" />
           </svg>
           <span class="font-sans text-sm tracking-[0.2em] uppercase font-normal leading-snug text-center">
             Enviar Fotos Agora
@@ -545,14 +582,13 @@
 
   <!-- ── Modal Mural de Fotos ─────────────────────── -->
   <div id="modal-fotos"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center px-4 bg-vinho/60 backdrop-blur-sm">
+    class="hidden fixed inset-0 z-50 flex items-center justify-center px-4 bg-vinho/60 backdrop-blur-sm">
     <div class="bg-offwhite rounded-sm shadow-2xl w-full max-w-sm flex flex-col overflow-hidden">
 
       <!-- Cabeçalho marsala -->
       <div class="bg-marsala px-6 py-5 flex items-center justify-between">
         <p class="font-serif text-offwhite text-xl">Enviar Fotos</p>
-        <button onclick="fecharModalFotos()"
-                class="w-7 h-7 flex items-center justify-center rounded-full text-offwhite/70
+        <button onclick="fecharModalFotos()" class="w-7 h-7 flex items-center justify-center rounded-full text-offwhite/70
                        hover:text-offwhite hover:bg-marsala2 transition-colors text-lg leading-none">×</button>
       </div>
 
@@ -560,31 +596,29 @@
       <div class="p-6 flex flex-col gap-5 text-center">
         <div class="w-14 h-14 mx-auto rounded-full bg-rosa flex items-center justify-center">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-marsala" fill="none" viewBox="0 0 24 24"
-               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-            <circle cx="12" cy="13" r="4"/>
+            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+            <circle cx="12" cy="13" r="4" />
           </svg>
         </div>
 
         <div>
           <h3 class="font-serif text-vinho text-xl mb-1">Em breve!</h3>
           <p class="text-sm text-vinho/55 leading-relaxed font-light">
-            O link para envio de fotos será ativado no dia do casamento.<br/>
+            O link para envio de fotos será ativado no dia do casamento.<br />
             Fique de olho no QR Code na sua mesa!
           </p>
         </div>
 
         <!-- Placeholder para o link externo futuro -->
         <!-- Para ativar: substitua o botão abaixo por um <a href="SEU_LINK"> -->
-        <a id="mural-link-externo" href="#" target="_blank" rel="noopener"
-           onclick="event.preventDefault()"
-           class="w-full py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase
+        <a id="mural-link-externo" href="#" target="_blank" rel="noopener" onclick="event.preventDefault()" class="w-full py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase
                   font-sans rounded-sm hover:bg-marsala2 transition-colors opacity-50 cursor-not-allowed">
           Acessar Álbum Compartilhado
         </a>
 
         <button onclick="fecharModalFotos()"
-                class="text-xs text-vinho/40 hover:text-marsala transition-colors tracking-widest uppercase">
+          class="text-xs text-vinho/40 hover:text-marsala transition-colors tracking-widest uppercase">
           Fechar
         </button>
       </div>
@@ -595,10 +629,12 @@
        RODAPÉ
   ════════════════════════════════════════════ -->
   <footer class="bg-vinho text-offwhite/60 text-center py-10 px-6">
-    <p id="footer-nomes" class="font-serif text-2xl text-offwhite mb-1">Elyabe <span class="italic text-rosa">&amp;</span> Raianny</p>
+    <p id="footer-nomes" class="font-serif text-2xl text-offwhite mb-1">Elyabe <span
+        class="italic text-rosa">&amp;</span> Raianny</p>
     <p id="footer-data" class="text-xs tracking-widest uppercase">18 · 09 · 2027</p>
     <p class="mt-6 text-xs opacity-40">Feito com amor ♥</p>
-    <a href="painel-noivos.html" class="mt-4 inline-block text-xs text-offwhite/20 hover:text-offwhite/50 transition-colors tracking-widest">
+    <a href="painel-noivos.html"
+      class="mt-4 inline-block text-xs text-offwhite/20 hover:text-offwhite/50 transition-colors tracking-widest">
       ⚙ Painel dos Noivos
     </a>
   </footer>
@@ -608,15 +644,15 @@
   ════════════════════════════════════════════ -->
   <script>
     var _cfgCt = {};
-    try { _cfgCt = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch(e) {}
+    try { _cfgCt = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
     const wedding = _cfgCt.data ? new Date(_cfgCt.data + 'T12:00:00') : new Date('2027-09-18T12:00:00');
 
     function updateCountdown() {
-      const now  = new Date();
+      const now = new Date();
       const diff = wedding - now;
 
       if (diff <= 0) {
-        ['days','hours','mins','secs'].forEach(id =>
+        ['days', 'hours', 'mins', 'secs'].forEach(id =>
           document.getElementById(id).textContent = '0'
         );
         return;
@@ -624,74 +660,88 @@
 
       const d = Math.floor(diff / 86400000);
       const h = Math.floor((diff % 86400000) / 3600000);
-      const m = Math.floor((diff % 3600000)  / 60000);
-      const s = Math.floor((diff % 60000)    / 1000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
 
-      document.getElementById('days').textContent  = String(d).padStart(2, '0');
+      document.getElementById('days').textContent = String(d).padStart(2, '0');
       document.getElementById('hours').textContent = String(h).padStart(2, '0');
-      document.getElementById('mins').textContent  = String(m).padStart(2, '0');
-      document.getElementById('secs').textContent  = String(s).padStart(2, '0');
+      document.getElementById('mins').textContent = String(m).padStart(2, '0');
+      document.getElementById('secs').textContent = String(s).padStart(2, '0');
     }
 
     updateCountdown();
     setInterval(updateCountdown, 1000);
   </script>
 
-  <!-- ═══════════════════════════════════════════
-       API LAYER — Google Sheets via Apps Script
-  ════════════════════════════════════════════ -->
+  <!-- =================================================
+       API LAYER — Supabase
+  ================================================== -->
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbwkit-Q6YMVVqr9g43BtGA3DR7GDUGj0zJyXQKMdhdisJeHbDl-MS6cKCb6QdvevYVR/exec';
+    /* ── SUPABASE CLIENT ────────────────────────────── */
+    const SUPABASE_URL = 'https://etmuifggjeshiuhccnvk.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    async function apiGet(sheet, localKey, padrao) {
+    // Tabelas single-row (upsert com id=1)
+    const TABELAS_SINGLE = ['configuracoes'];
+
+    /* ── apiGet ──────────────────────────────────── */
+    async function apiGet(tabela, localKey, padrao) {
       if (padrao === undefined) padrao = null;
-      if (!API_URL) {
-        const raw = localStorage.getItem(localKey);
-        return raw ? JSON.parse(raw) : padrao;
-      }
       try {
-        const res  = await fetch(API_URL + '?aba=' + encodeURIComponent(sheet));
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const text = await res.text();
-        const json = JSON.parse(text);
-        localStorage.setItem(localKey, JSON.stringify(json));
-        return json;
+        var resp = await supabase.from(tabela).select('*');
+        if (resp.error) throw resp.error;
+        var resultado = resp.data;
+        // Single-row: retorna o objeto direto
+        if (TABELAS_SINGLE.includes(tabela) && Array.isArray(resultado) && resultado.length > 0) {
+          resultado = resultado[0];
+        }
+        localStorage.setItem(localKey, JSON.stringify(resultado));
+        return resultado;
       } catch (err) {
-        console.warn('[API] GET "' + sheet + '" falhou — usando cache local:', err.message);
+        console.warn('[Supabase] GET "' + tabela + '" falhou — usando cache local:', err.message || err);
       }
-      const raw = localStorage.getItem(localKey);
+      var raw = localStorage.getItem(localKey);
       return raw ? JSON.parse(raw) : padrao;
     }
 
-    async function apiPost(sheet, data, localKey, modo) {
+    /* ── apiPost ─────────────────────────────────── */
+    async function apiPost(tabela, dados, localKey, modo) {
       if (!modo) modo = 'replace';
+      // Cache local
       if (modo === 'append') {
-        let arr = [];
+        var arr = [];
         try { arr = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch(e) {}
-        arr.push(data);
+        arr.push(dados);
         localStorage.setItem(localKey, JSON.stringify(arr));
       } else {
-        localStorage.setItem(localKey, JSON.stringify(data));
+        localStorage.setItem(localKey, JSON.stringify(dados));
       }
-      if (!API_URL) return true;
       try {
-        // Monta o pacote plano: campos do objeto espalhados na raiz
-        var pacote;
-        if (data && typeof data === 'object' && !Array.isArray(data)) {
-          pacote = Object.assign({ aba: sheet }, data);
+        var result;
+        if (modo === 'append') {
+          // Insert de uma linha (RSVP)
+          console.log('Enviando para Supabase (insert):', tabela, dados);
+          result = await supabase.from(tabela).insert(dados);
+        } else if (TABELAS_SINGLE.includes(tabela)) {
+          // Upsert single-row (Configuracoes, Historia)
+          var payload = Object.assign({ id: 1 }, dados);
+          console.log('Enviando para Supabase (upsert):', tabela, payload);
+          result = await supabase.from(tabela).upsert(payload);
         } else {
-          pacote = { aba: sheet, data: data };
+          // Replace total (Presentes): limpa e reinsere
+          console.log('Enviando para Supabase (replace):', tabela, dados);
+          await supabase.from(tabela).delete().gte('id', 0);
+          if (Array.isArray(dados) && dados.length > 0) {
+            result = await supabase.from(tabela).insert(dados);
+          } else {
+            result = { error: null };
+          }
         }
-        if (modo !== 'replace') pacote.modo = modo;
-        var body = JSON.stringify(pacote);
-        console.log('Enviando para o Google:', pacote);
-        const res  = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const text = await res.text();
-        if (text.toLowerCase().startsWith('erro')) throw new Error(text);
+        if (result.error) throw result.error;
         return true;
       } catch (err) {
-        console.warn('[API] POST "' + sheet + '" falhou:', err.message);
+        console.warn('[Supabase] POST "' + tabela + '" falhou:', err.message || err);
         return false;
       }
     }
@@ -734,8 +784,8 @@
 
     async function enviarRSVP(e) {
       e.preventDefault();
-      const nome   = document.getElementById('rsvp-nome').value.trim();
-      const whats  = document.getElementById('rsvp-whats').value.trim();
+      const nome = document.getElementById('rsvp-nome').value.trim();
+      const whats = document.getElementById('rsvp-whats').value.trim();
       const status = document.getElementById('rsvp-status').value;
 
       const acompanhantes = [];
@@ -745,19 +795,18 @@
       }
 
       const envio = {
-        ID:            String(Date.now()),
-        Nome:          nome          || '',
-        WhatsApp:      whats         || '',
-        Status:        status        || '',
-        Acompanhantes: acompanhantes.join(', '),
-        DataEnvio:     new Date().toLocaleString('pt-BR')
+        nome: nome || '',
+        whatsapp: whats || '',
+        status: status || '',
+        acompanhantes: acompanhantes.join(', '),
+        data_envio: new Date().toLocaleString('pt-BR')
       };
 
       const btn = document.getElementById('rsvp-submit-btn');
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Enviando…';
 
-      await apiPost('RSVP', envio, 'rsvp_pendentes', 'append');
+      await apiPost('rsvp', envio, 'rsvp_pendentes', 'append');
 
       // Mostra sucesso
       document.getElementById('rsvp-form').classList.add('hidden');
@@ -788,7 +837,7 @@
       document.body.classList.remove('bloqueado');
     }
     // Fecha ao clicar fora do painel
-    document.getElementById('modal-fotos').addEventListener('click', function(e) {
+    document.getElementById('modal-fotos').addEventListener('click', function (e) {
       if (e.target === this) fecharModalFotos();
     });
     // Para ativar o link externo no futuro, chame:
@@ -806,7 +855,7 @@
   ════════════════════════════════════════════ -->
   <script>
     var _cfgLk = {};
-    try { _cfgLk = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch(e) {}
+    try { _cfgLk = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
     const SENHA_CONVIDADOS = _cfgLk.senha || 'Casamento2026';
 
     function verificarLock() {
@@ -820,7 +869,7 @@
         lock.addEventListener('transitionend', () => lock.remove(), { once: true });
       } else {
         const erro = document.getElementById('lock-erro');
-        const inp  = document.getElementById('lock-input');
+        const inp = document.getElementById('lock-input');
         erro.classList.remove('hidden');
         inp.value = '';
         inp.focus();
@@ -842,22 +891,21 @@
        MODAL DE RESERVA DE PRESENTE
   ════════════════════════════════════════════ -->
   <div id="modal-reserva"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center px-4 bg-vinho/60 backdrop-blur-sm">
+    class="hidden fixed inset-0 z-50 flex items-center justify-center px-4 bg-vinho/60 backdrop-blur-sm">
     <div class="bg-offwhite rounded-sm shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto flex flex-col">
 
       <!-- Imagem / cabeçalho -->
       <div id="mr-img-wrap" class="relative h-52 bg-rosa/60 flex items-center justify-center shrink-0 overflow-hidden">
         <img id="mr-img" src="" alt="" class="w-full h-full object-cover hidden"
-             onerror="this.classList.add('hidden')" />
+          onerror="this.classList.add('hidden')" />
         <span id="mr-img-placeholder" class="text-6xl">🎁</span>
         <!-- Badge reservado -->
         <div id="mr-badge"
-             class="hidden absolute top-3 right-3 px-3 py-1 bg-vinho text-offwhite text-xs tracking-widest uppercase rounded-sm">
+          class="hidden absolute top-3 right-3 px-3 py-1 bg-vinho text-offwhite text-xs tracking-widest uppercase rounded-sm">
           Reservado
         </div>
         <!-- Fechar -->
-        <button onclick="fecharModalReserva()"
-                class="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full
+        <button onclick="fecharModalReserva()" class="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full
                        bg-vinho/20 hover:bg-vinho/40 text-offwhite transition-colors text-lg leading-none">×</button>
       </div>
 
@@ -865,31 +913,27 @@
       <div class="p-6 flex flex-col gap-5">
         <div>
           <h3 id="mr-nome" class="font-serif text-2xl text-vinho"></h3>
-          <p  id="mr-desc" class="text-sm text-vinho/60 mt-1 leading-relaxed"></p>
+          <p id="mr-desc" class="text-sm text-vinho/60 mt-1 leading-relaxed"></p>
         </div>
 
         <!-- Formulário de reserva (visível quando disponível) -->
         <div id="mr-form" class="flex flex-col gap-3">
           <p class="text-xs tracking-widest uppercase text-vinho/50">Preencha para reservar</p>
-          <input id="mr-reservante" type="text" placeholder="Seu nome completo *"
-                 class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
+          <input id="mr-reservante" type="text" placeholder="Seu nome completo *" class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
                         focus:outline-none focus:border-marsala transition-colors rounded-sm" />
-          <input id="mr-whats" type="tel" placeholder="WhatsApp (opcional)"
-                 class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
+          <input id="mr-whats" type="tel" placeholder="WhatsApp (opcional)" class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
                         focus:outline-none focus:border-marsala transition-colors rounded-sm" />
 
           <!-- Botão segurar para confirmar -->
           <div class="mt-1">
             <div class="relative rounded-sm overflow-hidden select-none">
               <!-- Barra de progresso preenchendo por baixo -->
-              <div id="mr-hold-bar"
-                   class="absolute inset-0 bg-marsala/25 pointer-events-none"
-                   style="width:0%; transition:none;"></div>
-              <button id="mr-hold-btn"
-                      class="relative w-full py-3.5 border-2 border-marsala text-marsala text-sm tracking-[0.2em] uppercase
+              <div id="mr-hold-bar" class="absolute inset-0 bg-marsala/25 pointer-events-none"
+                style="width:0%; transition:none;"></div>
+              <button id="mr-hold-btn" class="relative w-full py-3.5 border-2 border-marsala text-marsala text-sm tracking-[0.2em] uppercase
                              font-sans font-bold select-none touch-none transition-opacity"
-                      onmousedown="iniciarHold(event)" onmouseup="cancelarHold()" onmouseleave="cancelarHold()"
-                      ontouchstart="iniciarHold(event)" ontouchend="cancelarHold()" ontouchcancel="cancelarHold()">
+                onmousedown="iniciarHold(event)" onmouseup="cancelarHold()" onmouseleave="cancelarHold()"
+                ontouchstart="iniciarHold(event)" ontouchend="cancelarHold()" ontouchcancel="cancelarHold()">
                 Segurar para confirmar
               </button>
             </div>
@@ -900,7 +944,9 @@
         <!-- Informações de pagamento (após reservar) -->
         <div id="mr-pix" class="hidden flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-marsala/10 flex items-center justify-center text-marsala text-lg shrink-0">✦</div>
+            <div
+              class="w-10 h-10 rounded-full bg-marsala/10 flex items-center justify-center text-marsala text-lg shrink-0">
+              ✦</div>
             <div>
               <p class="font-serif text-lg text-vinho">Presente reservado!</p>
               <p class="text-xs text-vinho/50">Finalize enviando o presente ou realizando o pagamento</p>
@@ -916,8 +962,7 @@
                 <p class="text-xs text-vinho/50 uppercase tracking-wide">Chave PIX (CPF)</p>
                 <p id="mr-pix-chave" class="font-mono text-sm font-medium text-vinho mt-0.5">054.613.985-02</p>
               </div>
-              <button onclick="copiarPix()"
-                      class="shrink-0 px-3 py-1.5 border border-marsala text-marsala text-xs tracking-wide uppercase
+              <button onclick="copiarPix()" class="shrink-0 px-3 py-1.5 border border-marsala text-marsala text-xs tracking-wide uppercase
                              rounded-sm hover:bg-marsala hover:text-offwhite transition-all">
                 Copiar
               </button>
@@ -930,8 +975,7 @@
                 <p class="text-sm text-vinho mt-0.5">(79) 99879-2741</p>
               </div>
               <a href="https://wa.me/5579998792741?text=Ol%C3%A1%21+Reservei+um+presente+da+lista+de+casamento+de+Elyabe+e+Raianny+%F0%9F%8E%81"
-                 target="_blank" rel="noopener"
-                 class="shrink-0 px-3 py-1.5 bg-green-600 text-white text-xs tracking-wide uppercase
+                target="_blank" rel="noopener" class="shrink-0 px-3 py-1.5 bg-green-600 text-white text-xs tracking-wide uppercase
                         rounded-sm hover:bg-green-700 transition-colors">
                 Abrir
               </a>
@@ -945,7 +989,7 @@
           <p class="font-serif text-xl text-vinho">Este presente já foi reservado</p>
           <p class="text-sm text-vinho/50">Que tal escolher outro da lista?</p>
           <button onclick="fecharModalReserva()"
-                  class="mt-2 px-6 py-2 bg-marsala text-offwhite text-xs uppercase tracking-widest rounded-sm hover:bg-marsala2 transition-colors">
+            class="mt-2 px-6 py-2 bg-marsala text-offwhite text-xs uppercase tracking-widest rounded-sm hover:bg-marsala2 transition-colors">
             Ver outros presentes
           </button>
         </div>
@@ -957,35 +1001,35 @@
        PRESENTES — JS
   ════════════════════════════════════════════ -->
   <script>
-    // ── TRANSFORMADORES PRESENTES (interno ↔ API) ───────
+    // ── TRANSFORMADORES PRESENTES (interno ↔ Supabase) ───────
     function presenteParaApi(item) {
       return {
-        ID:           String(item.id       || ''),
-        Nome:         item.nome            || '',
-        Descricao:    item.descricao       || '',
-        Imagem:       item.imagem          || '',
-        ReservadoPor: item.reservadoPor ? (item.reservadoPor.nome  || '') : '',
-        WhatsReserva: item.reservadoPor ? (item.reservadoPor.whats || '') : '',
-        DataReserva:  item.reservadoPor ? (item.reservadoPor.data  || '') : ''
+        nome: item.nome || '',
+        descricao: item.descricao || '',
+        imagem: item.imagem || '',
+        reservado_por: item.reservadoPor ? (item.reservadoPor.nome || '') : '',
+        whats_reserva: item.reservadoPor ? (item.reservadoPor.whats || '') : '',
+        data_reserva: item.reservadoPor ? (item.reservadoPor.data || '') : '',
+        ativo: item.ativo !== false
       };
     }
     function presenteDeApi(raw) {
       return {
-        id:          raw.ID        || raw.id        || Date.now(),
-        nome:        raw.Nome      || raw.nome      || '',
-        descricao:   raw.Descricao || raw.descricao || '',
-        imagem:      raw.Imagem    || raw.imagem    || '',
-        ativo:       raw.ativo !== false,
-        reservadoPor: raw.ReservadoPor
-          ? { nome: raw.ReservadoPor, whats: raw.WhatsReserva || '', data: raw.DataReserva || '' }
+        id: raw.id || Date.now(),
+        nome: raw.nome || '',
+        descricao: raw.descricao || '',
+        imagem: raw.imagem || '',
+        ativo: raw.ativo !== false,
+        reservadoPor: raw.reservado_por
+          ? { nome: raw.reservado_por, whats: raw.whats_reserva || '', data: raw.data_reserva || '' }
           : null
       };
     }
 
     // ── DATA LAYER ─────────────────────────────────────
     async function carregarCatalogoPub() {
-      const dados = await apiGet('Presentes', 'presentes_catalogo', []);
-      const norm  = Array.isArray(dados) ? dados.map(presenteDeApi) : [];
+      const dados = await apiGet('presentes', 'presentes_catalogo', []);
+      const norm = Array.isArray(dados) ? dados.map(presenteDeApi) : [];
       return norm.filter(i => i.ativo);
     }
 
@@ -1017,18 +1061,18 @@
     }
 
     async function salvarReservaPub(id, reserva) {
-      const raw   = await apiGet('Presentes', 'presentes_catalogo', []);
+      const raw = await apiGet('presentes', 'presentes_catalogo', []);
       const todos = Array.isArray(raw) ? raw.map(presenteDeApi) : [];
-      const idx   = todos.findIndex(i => i.id === id);
+      const idx = todos.findIndex(i => i.id === id);
       if (idx > -1) { todos[idx].reservadoPor = reserva; }
-      await apiPost('Presentes', todos.map(presenteParaApi), 'presentes_catalogo');
+      await apiPost('presentes', todos.map(presenteParaApi), 'presentes_catalogo');
     }
 
     // ── ESTADO ─────────────────────────────────────────
-    let itemAtual      = null;
-    let holdAnimFrame  = null;
-    let holdStartTime  = null;
-    const HOLD_MS      = 3000;
+    let itemAtual = null;
+    let holdAnimFrame = null;
+    let holdStartTime = null;
+    const HOLD_MS = 3000;
 
     // ── GRID ───────────────────────────────────────────
     async function renderizarPresentesSite() {
@@ -1041,22 +1085,22 @@
       }
       grid.innerHTML = catalogo.map(item => {
         const reservado = !!item.reservadoPor;
-        const imgSrc    = resolverUrlPresente(item.imagem);
+        const imgSrc = resolverUrlPresente(item.imagem);
         return `
           <div onclick="${!reservado ? `abrirPresente(${item.id})` : ''}"
                class="group bg-rosa/20 border border-rosa2/40 rounded-sm overflow-hidden
                       transition-all duration-200 ${!reservado
-                        ? 'cursor-pointer hover:shadow-lg hover:border-marsala/40 hover:-translate-y-1'
-                        : 'opacity-60'}">
+            ? 'cursor-pointer hover:shadow-lg hover:border-marsala/40 hover:-translate-y-1'
+            : 'opacity-60'}">
             <div class="relative h-48 bg-rosa/40 flex items-center justify-center overflow-hidden">
               ${imgSrc
-                ? `<img src="${imgSrc}" alt="${item.nome}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x400/F5D0D8/8E3B46?text=Foto+Indisponivel'" />`
-                : `<div class="w-full h-full flex items-center justify-center bg-rosa/40"><span class="text-5xl">🎁</span></div>`}
+            ? `<img src="${imgSrc}" alt="${item.nome}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x400/F5D0D8/8E3B46?text=Foto+Indisponivel'" />`
+            : `<div class="w-full h-full flex items-center justify-center bg-rosa/40"><span class="text-5xl">🎁</span></div>`}
               ${reservado
-                ? `<div class="absolute inset-0 bg-vinho/25 flex items-center justify-center">
+            ? `<div class="absolute inset-0 bg-vinho/25 flex items-center justify-center">
                      <span class="px-3 py-1 bg-vinho text-offwhite text-xs tracking-widest uppercase rounded-sm">Reservado</span>
                    </div>`
-                : `<div class="absolute inset-0 bg-marsala/0 group-hover:bg-marsala/5 transition-colors flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
+            : `<div class="absolute inset-0 bg-marsala/0 group-hover:bg-marsala/5 transition-colors flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
                      <span class="text-xs text-marsala tracking-widest uppercase bg-offwhite/90 px-3 py-1 rounded-sm">Clique para reservar</span>
                    </div>`}
             </div>
@@ -1080,7 +1124,7 @@
       document.getElementById('mr-desc').textContent = itemAtual.descricao;
 
       const img = document.getElementById('mr-img');
-      const ph  = document.getElementById('mr-img-placeholder');
+      const ph = document.getElementById('mr-img-placeholder');
       if (itemAtual.imagem) {
         img.src = resolverUrlPresente(itemAtual.imagem);
         img.classList.remove('hidden');
@@ -1114,7 +1158,7 @@
     }
 
     // Fecha clicando fora
-    document.getElementById('modal-reserva').addEventListener('click', function(e) {
+    document.getElementById('modal-reserva').addEventListener('click', function (e) {
       if (e.target === this) fecharModalReserva();
     });
 
@@ -1164,7 +1208,7 @@
     // ── CONFIRMAR RESERVA ──────────────────────────────
     async function confirmarReserva() {
       if (!itemAtual) return;
-      const nome  = document.getElementById('mr-reservante').value.trim();
+      const nome = document.getElementById('mr-reservante').value.trim();
       const whats = document.getElementById('mr-whats').value.trim();
       if (!nome) return;
 
@@ -1250,15 +1294,15 @@
                  a2 2 0 00-2 2v12a2 2 0 002 2z"/>
       </svg>`;
 
-    function renderizarGaleriaSite() {
-      let fotos;
-      try { fotos = JSON.parse(localStorage.getItem('galeria_fotos') || '[]'); }
-      catch { fotos = []; }
+    async function renderizarGaleriaSite() {
+      // Lê fotos da tabela 'historia' (rows com url não-vazio)
+      var dados = await apiGet('historia', 'galeria_fotos', []);
+      var fotos = Array.isArray(dados) ? dados.filter(function(r) { return r && r.url; }) : [];
 
       const container = document.getElementById('galeria-dinamica');
-      const vazia     = document.getElementById('galeria-vazia-site');
+      const vazia = document.getElementById('galeria-vazia-site');
 
-      if (!Array.isArray(fotos) || !fotos.length) {
+      if (!fotos.length) {
         container.style.display = 'none';
         vazia.classList.remove('hidden');
         return;
@@ -1268,11 +1312,9 @@
       vazia.classList.add('hidden');
 
       container.innerHTML = fotos.map(foto => {
-        if (!foto || !foto.url) return '';                       // entrada inválida — ignora
-        const src     = resolverUrlFoto(foto.url);
-        console.log('Link final da imagem:', src);
+        const src = resolverUrlFoto(foto.url);
         const legenda = foto.legenda
-          ? foto.legenda.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          ? foto.legenda.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
           : '';
         return `
           <div class="galeria-masonry-item">
@@ -1297,8 +1339,8 @@
   ════════════════════════════════════════════ -->
   <script>
     (function () {
-      const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                     'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
       function fmtPontos(iso) {   // "2027-09-18" → "18 · 09 · 2027"
         var p = iso.split('-');
@@ -1306,7 +1348,7 @@
       }
       function fmtExtenso(iso) {  // "2027-09-18" → "18 de Setembro de 2027"
         var p = iso.split('-');
-        return parseInt(p[2]) + ' de ' + MESES[parseInt(p[1])-1] + ' de ' + p[0];
+        return parseInt(p[2]) + ' de ' + MESES[parseInt(p[1]) - 1] + ' de ' + p[0];
       }
       function fmtTitulo(iso) {   // "2027-09-18" → "18.09.2027"
         var p = iso.split('-');
@@ -1316,12 +1358,12 @@
 
       document.addEventListener('DOMContentLoaded', function () {
         var cfg = {};
-        try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch(e) {}
+        try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
 
-        var noivo    = cfg.noivo    || 'Elyabe';
-        var noiva    = cfg.noiva    || 'Raianny';
+        var noivo = cfg.noivo || 'Elyabe';
+        var noiva = cfg.noiva || 'Raianny';
         var iniciais = cfg.iniciais || 'E & R';
-        var data     = cfg.data     || '2027-09-18';
+        var data = cfg.data || '2027-09-18';
 
         // Título da aba
         document.title = noivo + ' & ' + noiva + ' — ' + fmtTitulo(data);
@@ -1329,15 +1371,15 @@
         // Lock screen
         set('lock-noivo', noivo);
         set('lock-noiva', noiva);
-        set('lock-data',  fmtPontos(data));
+        set('lock-data', fmtPontos(data));
 
         // Navegação
         set('site-iniciais', iniciais);
 
         // Hero
         set('hero-data-ext', fmtExtenso(data));
-        set('hero-noivo',    noivo);
-        set('hero-noiva',    noiva);
+        set('hero-noivo', noivo);
+        set('hero-noiva', noiva);
 
         // Footer
         var fn = document.getElementById('footer-nomes');
@@ -1352,12 +1394,14 @@
   ════════════════════════════════════════════ -->
   <script>
     document.addEventListener('DOMContentLoaded', async function () {
-      var dados = await apiGet('Historia', 'texto_nossa_historia', '');
+      // Texto da "Nossa História" — vem da tabela 'historia', campo 'texto' da primeira row
+      var dados = await apiGet('historia', 'texto_nossa_historia', []);
       var texto = '';
-      if (Array.isArray(dados) && dados.length > 0) {
-        texto = dados[0].Texto || dados[0].texto || '';
-      } else if (dados && typeof dados === 'object' && !Array.isArray(dados)) {
-        texto = dados.Texto || dados.texto || '';
+      if (Array.isArray(dados)) {
+        var rowTexto = dados.find(function(r) { return r && r.texto; });
+        if (rowTexto) texto = rowTexto.texto;
+      } else if (dados && typeof dados === 'object') {
+        texto = dados.texto || '';
       } else if (typeof dados === 'string') {
         texto = dados;
       }
@@ -1368,4 +1412,5 @@
   </script>
 
 </body>
+
 </html>
