@@ -1931,7 +1931,7 @@
       document.getElementById('cfg-noiva').value = cfg.noiva || '';
       document.getElementById('cfg-iniciais').value = cfg.iniciais || '';
       document.getElementById('cfg-data').value = cfg.data || '';
-      document.getElementById('cfg-senha').value = cfg.senha || '';
+      document.getElementById('cfg-senha').value = cfg.senha_convidados || '';
       document.getElementById('cfg-senha-noivos').value = cfg.senha_noivos || '';
       document.getElementById('cfg-cor-marsala').value = cfg.cor_marsala || '#8E3B46';
       document.getElementById('cfg-cor-rosa').value = cfg.cor_rosa || '#F5D0D8';
@@ -1945,7 +1945,7 @@
         noiva: document.getElementById('cfg-noiva').value.trim() || 'Raianny',
         iniciais: document.getElementById('cfg-iniciais').value.trim() || 'E & R',
         data: document.getElementById('cfg-data').value || '2027-09-18',
-        senha: document.getElementById('cfg-senha').value.trim() || 'Casamento2026',
+        senha_convidados: document.getElementById('cfg-senha').value.trim() || 'Casamento2026',
         senha_noivos: document.getElementById('cfg-senha-noivos').value.trim() || 'noivos2027',
         cor_marsala: document.getElementById('cfg-cor-marsala').value,
         cor_rosa: document.getElementById('cfg-cor-rosa').value,
@@ -1965,16 +1965,25 @@
       document.getElementById('cfg-cor-marsala').value = COR_MARSALA_PADRAO;
       document.getElementById('cfg-cor-rosa').value = COR_ROSA_PADRAO;
 
-      var cfg = {};
-      try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
-      cfg.cor_marsala = COR_MARSALA_PADRAO;
-      cfg.cor_rosa = COR_ROSA_PADRAO;
+      // Monta objeto só com colunas válidas do SQL
+      var cfgLocal = {};
+      try { cfgLocal = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
+      var cfgLimpo = {
+        noivo: cfgLocal.noivo || 'Elyabe',
+        noiva: cfgLocal.noiva || 'Raianny',
+        iniciais: cfgLocal.iniciais || 'E & R',
+        data: cfgLocal.data || '2027-09-18',
+        senha_convidados: cfgLocal.senha_convidados || 'Casamento2026',
+        senha_noivos: cfgLocal.senha_noivos || 'noivos2027',
+        cor_marsala: COR_MARSALA_PADRAO,
+        cor_rosa: COR_ROSA_PADRAO,
+      };
 
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Resetando…';
 
-      await apiPost('configuracoes', cfg, 'configuracoes_site');
-      localStorage.setItem('configuracoes_site', JSON.stringify(cfg));
+      await apiPost('configuracoes', cfgLimpo, 'configuracoes_site');
+      localStorage.setItem('configuracoes_site', JSON.stringify(cfgLimpo));
 
       btn.textContent = 'Cores Resetadas ✓';
       setTimeout(function () {

@@ -818,7 +818,7 @@
   <script>
     var _cfgLk = {};
     try { _cfgLk = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
-    const SENHA_CONVIDADOS = _cfgLk.senha || 'Casamento2026';
+    const SENHA_CONVIDADOS = _cfgLk.senha_convidados || 'Casamento2026';
 
     function verificarLock() {
       const val = document.getElementById('lock-input').value;
