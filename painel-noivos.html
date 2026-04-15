@@ -821,26 +821,31 @@
     /* ── API LAYER — Supabase ──────────────────────── */
     const SUPABASE_URL = 'https://etmuifggjeshiuhccnvk.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     /* ── apiGet ──────────────────────────────────── */
     async function apiGet(tabela) {
-      const { data, error } = await supabase.from(tabela).select('*').order('id', { ascending: true });
+      const { data, error } = await _supabase.from(tabela.toLowerCase()).select('*').order('id', { ascending: true });
       if (error) { console.error('Erro no GET:', error); return []; }
       return data;
     }
 
     /* ── apiPost ─────────────────────────────────── */
     async function apiPost(tabela, dados, localKey, modo) {
-      if (modo === 'append') {
-        const { error } = await supabase.from(tabela).insert([dados]);
-        if (error) console.error('Erro no POST append:', error);
-        return !error;
-      } else {
-        // Para tabelas de linha única como configuracoes (ID 1)
-        const { error } = await supabase.from(tabela).upsert({ id: 1, ...dados });
-        if (error) console.error('Erro no POST upsert:', error);
-        return !error;
+      const tabelaMin = tabela.toLowerCase();
+      try {
+        if (modo === 'append') {
+          const { error } = await _supabase.from(tabelaMin).insert([dados]);
+          if (error) throw error;
+        } else {
+          // Para tabelas de linha única como configuracoes e historia (ID 1)
+          const { error } = await _supabase.from(tabelaMin).upsert({ id: 1, ...dados });
+          if (error) throw error;
+        }
+        return true;
+      } catch (err) {
+        console.error('Erro no POST:', err.message);
+        return false;
       }
     }
 
@@ -1352,7 +1357,7 @@
       orcamento[i] = { id: oldId, fornecedor, categoria, estimado, pago };
       salvar('orcamento', orcamento);
       if (oldId) {
-        try { await supabase.from('financeiro').update({ fornecedor, categoria, estimado, pago }).eq('id', oldId); } catch(e) { console.warn(e); }
+        try { await _supabase.from('financeiro').update({ fornecedor, categoria, estimado, pago }).eq('id', oldId); } catch(e) { console.warn(e); }
       }
       document.getElementById('orc-row-' + i).outerHTML = linhaOrcamentoView(i);
       atualizarTotaisOrcamento();
@@ -1395,7 +1400,7 @@
       if (!fornecedor) return alert('Informe o fornecedor.');
       var novo = { fornecedor, categoria, estimado, pago };
       try {
-        var resp = await supabase.from('financeiro').insert(novo).select();
+        var resp = await _supabase.from('financeiro').insert(novo).select();
         if (resp.error) throw resp.error;
         if (resp.data && resp.data[0]) novo.id = resp.data[0].id;
       } catch(e) { console.warn('[Supabase] insert financeiro falhou:', e); }
@@ -1410,7 +1415,7 @@
       if (confirm('Remover ' + orcamento[i].fornecedor + '?')) {
         var item = orcamento[i];
         if (item.id) {
-          try { await supabase.from('financeiro').delete().eq('id', item.id); } catch(e) { console.warn(e); }
+          try { await _supabase.from('financeiro').delete().eq('id', item.id); } catch(e) { console.warn(e); }
         }
         orcamento.splice(i, 1);
         salvar('orcamento', orcamento);
@@ -1458,7 +1463,7 @@
       for (const item of dados) {
         const row = presenteParaApi(item);
         if (item.id) row.id = item.id;
-        const { error } = await supabase.from('presentes').upsert(row);
+        const { error } = await _supabase.from('presentes').upsert(row);
         if (error) console.error('Erro ao salvar presente:', error);
       }
     }
@@ -1577,12 +1582,12 @@
         if (idx > -1) {
           catalogo[idx] = { ...catalogo[idx], nome, imagem, descricao, ativo };
           const row = presenteParaApi(catalogo[idx]);
-          await supabase.from('presentes').update(row).eq('id', editandoId);
+          await _supabase.from('presentes').update(row).eq('id', editandoId);
         }
       } else {
         const row = { nome, descricao, imagem, ativo, reservado_por: '', whats_reserva: '', data_reserva: '' };
         try {
-          const resp = await supabase.from('presentes').insert(row).select();
+          const resp = await _supabase.from('presentes').insert(row).select();
           if (resp.error) throw resp.error;
           const newId = resp.data && resp.data[0] ? resp.data[0].id : Date.now();
           catalogo.push({ id: newId, nome, imagem, descricao, ativo, reservadoPor: null });
@@ -1604,7 +1609,7 @@
       const item = catalogo.find(i => i.id === id);
       if (!item) return;
       item.ativo = !item.ativo;
-      const { error } = await supabase.from('presentes').update({ ativo: item.ativo }).eq('id', id);
+      const { error } = await _supabase.from('presentes').update({ ativo: item.ativo }).eq('id', id);
       if (error) console.error('Erro ao toggle ativo:', error);
       renderizarGerItens();
     }
@@ -1616,7 +1621,7 @@
         ? `"${item.nome}" já está reservado. Remover mesmo assim?`
         : `Remover "${item.nome}"?`;
       if (!confirm(msg)) return;
-      try { await supabase.from('presentes').delete().eq('id', id); } catch(e) { console.warn(e); }
+      try { await _supabase.from('presentes').delete().eq('id', id); } catch(e) { console.warn(e); }
       catalogo = catalogo.filter(i => i.id !== id);
       renderizarGerItens();
       renderizarRecebidos();
@@ -1626,7 +1631,7 @@
       const item = catalogo.find(i => i.id === id);
       if (!item || !confirm(`Liberar a reserva de "${item.nome}"?`)) return;
       item.reservadoPor = null;
-      const { error } = await supabase.from('presentes').update({ reservado_por: '', whats_reserva: '', data_reserva: '' }).eq('id', id);
+      const { error } = await _supabase.from('presentes').update({ reservado_por: '', whats_reserva: '', data_reserva: '' }).eq('id', id);
       if (error) console.error('Erro ao liberar reserva:', error);
       renderizarGerItens();
       renderizarRecebidos();
@@ -1706,7 +1711,7 @@
       // Salva no Supabase (tabela historia, como foto)
       var novo = { url: urlDireta, legenda: legenda };
       try {
-        var resp = await supabase.from('historia').insert(novo).select();
+        var resp = await _supabase.from('historia').insert(novo).select();
         if (resp.error) throw resp.error;
         if (resp.data && resp.data[0]) novo.id = resp.data[0].id;
       } catch(e) { console.warn('[Supabase] insert historia foto falhou:', e); novo.id = Date.now(); }
@@ -1722,7 +1727,7 @@
       const idx = galeria.findIndex(f => Number(f.id) === idNum);
       if (idx === -1) return;
       if (!confirm('Remover "' + (galeria[idx].legenda || 'esta foto') + '" da galeria?')) return;
-      try { await supabase.from('historia').delete().eq('id', idNum); } catch(e) { console.warn(e); }
+      try { await _supabase.from('historia').delete().eq('id', idNum); } catch(e) { console.warn(e); }
       galeria.splice(idx, 1);
       salvar('galeria_fotos', galeria);
       renderizarGaleriaPainel();
@@ -1845,7 +1850,7 @@
 
       // Remove do Supabase
       if (r.id) {
-        try { await supabase.from('rsvp').delete().eq('id', r.id); } catch(e) { console.warn(e); }
+        try { await _supabase.from('rsvp').delete().eq('id', r.id); } catch(e) { console.warn(e); }
       }
 
       renderizarConvidados();
@@ -1856,14 +1861,14 @@
       const pendentes = await apiGet('rsvp');
       const r = pendentes[i];
       if (r && r.id) {
-        try { await supabase.from('rsvp').delete().eq('id', r.id); } catch(e) { console.warn(e); }
+        try { await _supabase.from('rsvp').delete().eq('id', r.id); } catch(e) { console.warn(e); }
       }
       carregarInbox();
     }
 
     async function dispensarTodas() {
       if (confirm('Dispensar todas as confirmações pendentes sem adicionar à lista?')) {
-        try { await supabase.from('rsvp').delete().gte('id', 0); } catch(e) { console.warn(e); }
+        try { await _supabase.from('rsvp').delete().gte('id', 0); } catch(e) { console.warn(e); }
         carregarInbox();
       }
     }
@@ -1876,7 +1881,7 @@
 
       // Financeiro: carrega do Supabase, fallback para localStorage
       try {
-        var respFin = await supabase.from('financeiro').select('*');
+        var respFin = await _supabase.from('financeiro').select('*');
         if (respFin.error) throw respFin.error;
         orcamento = respFin.data || [];
         salvar('orcamento', orcamento);
@@ -1891,7 +1896,7 @@
 
       // Galeria: carrega fotos da tabela historia (rows com url)
       try {
-        var respHist = await supabase.from('historia').select('*');
+        var respHist = await _supabase.from('historia').select('*');
         if (respHist.error) throw respHist.error;
         galeria = (respHist.data || []).filter(function(r) { return r && r.url; });
         salvar('galeria_fotos', galeria);
@@ -1998,7 +2003,7 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
       try {
-        await supabase.from('historia').upsert({ id: 1, texto: texto });
+        await _supabase.from('historia').upsert({ id: 1, texto: texto });
       } catch(e) { console.warn('[Supabase] upsert historia texto falhou:', e); }
       localStorage.setItem('texto_nossa_historia', JSON.stringify(texto));
       btn.textContent = 'Salvo ✓';

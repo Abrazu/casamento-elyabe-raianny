@@ -680,26 +680,31 @@
     /* ── SUPABASE CLIENT ────────────────────────────── */
     const SUPABASE_URL = 'https://etmuifggjeshiuhccnvk.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     /* ── apiGet ──────────────────────────────────── */
     async function apiGet(tabela) {
-      const { data, error } = await supabase.from(tabela).select('*').order('id', { ascending: true });
+      const { data, error } = await _supabase.from(tabela.toLowerCase()).select('*').order('id', { ascending: true });
       if (error) { console.error('Erro no GET:', error); return []; }
       return data;
     }
 
     /* ── apiPost ─────────────────────────────────── */
     async function apiPost(tabela, dados, localKey, modo) {
-      if (modo === 'append') {
-        const { error } = await supabase.from(tabela).insert([dados]);
-        if (error) console.error('Erro no POST append:', error);
-        return !error;
-      } else {
-        // Para tabelas de linha única como configuracoes (ID 1)
-        const { error } = await supabase.from(tabela).upsert({ id: 1, ...dados });
-        if (error) console.error('Erro no POST upsert:', error);
-        return !error;
+      const tabelaMin = tabela.toLowerCase();
+      try {
+        if (modo === 'append') {
+          const { error } = await _supabase.from(tabelaMin).insert([dados]);
+          if (error) throw error;
+        } else {
+          // Para tabelas de linha única como configuracoes e historia (ID 1)
+          const { error } = await _supabase.from(tabelaMin).upsert({ id: 1, ...dados });
+          if (error) throw error;
+        }
+        return true;
+      } catch (err) {
+        console.error('Erro no POST:', err.message);
+        return false;
       }
     }
   </script>
@@ -1023,7 +1028,7 @@
         whats_reserva: reserva ? (reserva.whats || '') : '',
         data_reserva: reserva ? (reserva.data || '') : ''
       };
-      const { error } = await supabase.from('presentes').update(updateData).eq('id', id);
+      const { error } = await _supabase.from('presentes').update(updateData).eq('id', id);
       if (error) console.error('Erro ao salvar reserva:', error);
     }
 
