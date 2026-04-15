@@ -405,9 +405,11 @@
               <tr>
                 <th class="px-4 py-3 text-left">Fornecedor</th>
                 <th class="px-4 py-3 text-left">Categoria</th>
-                <th class="px-4 py-3 text-right">Estimado</th>
+                <th class="px-4 py-3 text-right">Total</th>
                 <th class="px-4 py-3 text-right">Pago</th>
                 <th class="px-4 py-3 text-right">Saldo</th>
+                <th class="px-4 py-3 text-left">Status</th>
+                <th class="px-4 py-3 text-left">Vencimento</th>
                 <th class="px-4 py-3 text-left">Ações</th>
               </tr>
             </thead>
@@ -420,7 +422,7 @@
                 <td id="tfoot-estimado" class="px-4 py-3 text-right">—</td>
                 <td id="tfoot-pago" class="px-4 py-3 text-right text-green-700">—</td>
                 <td id="tfoot-saldo" class="px-4 py-3 text-right text-marsala">—</td>
-                <td class="px-4 py-3"></td>
+                <td colspan="3" class="px-4 py-3"></td>
               </tr>
             </tfoot>
           </table>
@@ -743,10 +745,20 @@
         class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
       <input id="orc-categoria" type="text" placeholder="Categoria (ex: Buffet, Flores…)"
         class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
-      <input id="orc-estimado" type="number" placeholder="Valor estimado (R$)"
+      <input id="orc-valor-total" type="number" placeholder="Valor total (R$)"
         class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
-      <input id="orc-pago" type="number" placeholder="Valor já pago (R$)"
+      <input id="orc-valor-pago" type="number" placeholder="Valor já pago (R$)"
         class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      <select id="orc-status" class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm">
+        <option value="Pendente">Pendente</option>
+        <option value="Parcial">Parcial</option>
+        <option value="Pago">Pago</option>
+      </select>
+      <div>
+        <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Vencimento</label>
+        <input id="orc-vencimento" type="date"
+          class="w-full border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+      </div>
       <div class="flex gap-3 mt-2">
         <button onclick="fecharModal('modal-orcamento')"
           class="flex-1 py-2 border border-rosa2 text-vinho/60 text-xs uppercase tracking-widest hover:border-marsala hover:text-marsala transition-colors rounded-sm">
@@ -952,12 +964,12 @@
     ];
 
     const orcamentoPadrao = [
-      { fornecedor: 'Espaço Villa Rosa', categoria: 'Local', estimado: 15000, pago: 5000 },
-      { fornecedor: 'Buffet Sabor & Arte', categoria: 'Alimentação', estimado: 12000, pago: 3000 },
-      { fornecedor: 'Foto & Film Studio', categoria: 'Foto/Vídeo', estimado: 8000, pago: 2000 },
-      { fornecedor: 'Atelier Noiva', categoria: 'Vestido', estimado: 4500, pago: 4500 },
-      { fornecedor: 'DJ Marco Hits', categoria: 'Música', estimado: 3000, pago: 0 },
-      { fornecedor: 'Flores & Sonhos', categoria: 'Decoração', estimado: 5500, pago: 1500 },
+      { fornecedor: 'Espaço Villa Rosa', categoria: 'Local', valor_total: 15000, valor_pago: 5000, status_pagamento: 'Parcial', vencimento: '' },
+      { fornecedor: 'Buffet Sabor & Arte', categoria: 'Alimentação', valor_total: 12000, valor_pago: 3000, status_pagamento: 'Parcial', vencimento: '' },
+      { fornecedor: 'Foto & Film Studio', categoria: 'Foto/Vídeo', valor_total: 8000, valor_pago: 2000, status_pagamento: 'Parcial', vencimento: '' },
+      { fornecedor: 'Atelier Noiva', categoria: 'Vestido', valor_total: 4500, valor_pago: 4500, status_pagamento: 'Pago', vencimento: '' },
+      { fornecedor: 'DJ Marco Hits', categoria: 'Música', valor_total: 3000, valor_pago: 0, status_pagamento: 'Pendente', vencimento: '' },
+      { fornecedor: 'Flores & Sonhos', categoria: 'Decoração', valor_total: 5500, valor_pago: 1500, status_pagamento: 'Parcial', vencimento: '' },
     ];
 
     const catalogoPadrao = [
@@ -1149,14 +1161,19 @@
 
     /* Checkbox — atualiza só o label, sem re-render total */
     function toggleTarefa(gi, ti) {
-      checklist[gi].tarefas[ti].feita = !checklist[gi].tarefas[ti].feita;
+      const t = checklist[gi].tarefas[ti];
+      t.feita = !t.feita;
       salvar('checklist', checklist);
       const label = document.querySelector(`label[for="chk-${gi}-${ti}"]`);
       if (label) {
-        const riscado = checklist[gi].tarefas[ti].feita ? 'line-through opacity-40' : '';
+        const riscado = t.feita ? 'line-through opacity-40' : '';
         label.className = `flex-1 text-sm text-vinho cursor-pointer select-none ${riscado}`;
       }
       atualizarProgresso();
+      if (t.id) {
+        _supabase.from('checklist').update({ concluido: t.feita }).eq('id', t.id)
+          .then(({ error }) => { if (error) console.warn('[Supabase] toggle checklist:', error); });
+      }
     }
 
     /* Editar nome de tarefa */
@@ -1165,12 +1182,16 @@
       const inp = document.getElementById('cl-edit-' + gi + '-' + ti);
       inp.focus(); inp.select();
     }
-    function confirmarEdicaoTarefa(gi, ti) {
+    async function confirmarEdicaoTarefa(gi, ti) {
       const texto = document.getElementById('cl-edit-' + gi + '-' + ti).value.trim();
       if (!texto) return;
-      checklist[gi].tarefas[ti].texto = texto;
+      const t = checklist[gi].tarefas[ti];
+      t.texto = texto;
       salvar('checklist', checklist);
       document.getElementById('cl-t-' + gi + '-' + ti).outerHTML = tarefaView(gi, ti);
+      if (t.id) {
+        try { await _supabase.from('checklist').update({ tarefa: texto }).eq('id', t.id); } catch(e) { console.warn(e); }
+      }
     }
     function cancelarEdicaoTarefa(gi, ti) {
       document.getElementById('cl-t-' + gi + '-' + ti).outerHTML = tarefaView(gi, ti);
@@ -1185,20 +1206,35 @@
       document.getElementById('cl-add-' + gi).classList.add('hidden');
       document.getElementById('cl-nova-' + gi).value = '';
     }
-    function confirmarNovaTarefa(gi) {
+    async function confirmarNovaTarefa(gi) {
       const texto = document.getElementById('cl-nova-' + gi).value.trim();
       if (!texto) return;
-      checklist[gi].tarefas.push({ texto, feita: false });
+      const grupoNome = checklist[gi].grupo;
+      const tarefa = { texto, feita: false };
+      checklist[gi].tarefas.push(tarefa);
       salvar('checklist', checklist);
       renderizarChecklist();
-      mostrarAddTarefa(gi); // mantém o input aberto para adicionar mais
+      mostrarAddTarefa(gi);
+      try {
+        const resp = await _supabase.from('checklist').insert({
+          grupo: grupoNome, tarefa: texto, concluido: false
+        }).select();
+        if (!resp.error && resp.data && resp.data[0]) {
+          tarefa.id = resp.data[0].id;
+          salvar('checklist', checklist);
+        }
+      } catch(e) { console.warn('[Supabase] insert checklist:', e); }
     }
 
     /* Remover tarefa */
-    function removerTarefa(gi, ti) {
+    async function removerTarefa(gi, ti) {
+      const t = checklist[gi].tarefas[ti];
       checklist[gi].tarefas.splice(ti, 1);
       salvar('checklist', checklist);
       renderizarChecklist();
+      if (t.id) {
+        try { await _supabase.from('checklist').delete().eq('id', t.id); } catch(e) { console.warn(e); }
+      }
     }
 
     /* Editar nome de grupo */
@@ -1218,12 +1254,16 @@
       const inp = document.getElementById('cl-gnome-' + gi);
       inp.focus(); inp.select();
     }
-    function confirmarEdicaoGrupo(gi) {
+    async function confirmarEdicaoGrupo(gi) {
       const nome = document.getElementById('cl-gnome-' + gi)?.value.trim();
       if (!nome) return;
+      const oldNome = checklist[gi].grupo;
       checklist[gi].grupo = nome;
       salvar('checklist', checklist);
       renderizarChecklist();
+      if (oldNome !== nome) {
+        try { await _supabase.from('checklist').update({ grupo: nome }).eq('grupo', oldNome); } catch(e) { console.warn(e); }
+      }
     }
     function cancelarEdicaoGrupo(gi) { renderizarChecklist(); }
 
@@ -1244,15 +1284,17 @@
       cancelarAddGrupo();
       renderizarChecklist();
     }
-    function removerGrupo(gi) {
+    async function removerGrupo(gi) {
       const n = checklist[gi].tarefas.length;
       const msg = n > 0
         ? `Remover o grupo "${checklist[gi].grupo}" e suas ${n} tarefa(s)?`
         : `Remover o grupo "${checklist[gi].grupo}"?`;
       if (!confirm(msg)) return;
+      const grupoNome = checklist[gi].grupo;
       checklist.splice(gi, 1);
       salvar('checklist', checklist);
       renderizarChecklist();
+      try { await _supabase.from('checklist').delete().eq('grupo', grupoNome); } catch(e) { console.warn(e); }
     }
 
     function atualizarProgresso() {
@@ -1272,14 +1314,20 @@
     /* Renderiza a linha no modo visualização */
     function linhaOrcamentoView(i) {
       const item = orcamento[i];
-      const saldo = item.estimado - item.pago;
+      const saldo = (item.valor_total || 0) - (item.valor_pago || 0);
       const saldoCls = saldo > 0 ? 'text-marsala' : 'text-green-700';
+      const statusCls = item.status_pagamento === 'Pago' ? 'badge-confirmado'
+        : item.status_pagamento === 'Parcial' ? 'badge-escolhido' : 'badge-pendente';
       return `<tr id="orc-row-${i}" class="hover:bg-rosa/20 transition-colors">
         <td class="px-4 py-3 font-medium text-vinho">${item.fornecedor}</td>
         <td class="px-4 py-3 text-vinho/60 text-xs">${item.categoria}</td>
-        <td class="px-4 py-3 text-right text-vinho">${fmtBRL(item.estimado)}</td>
-        <td class="px-4 py-3 text-right text-green-700">${fmtBRL(item.pago)}</td>
+        <td class="px-4 py-3 text-right text-vinho">${fmtBRL(item.valor_total || 0)}</td>
+        <td class="px-4 py-3 text-right text-green-700">${fmtBRL(item.valor_pago || 0)}</td>
         <td class="px-4 py-3 text-right font-medium ${saldoCls}">${fmtBRL(saldo)}</td>
+        <td class="px-4 py-3">
+          <span class="px-2 py-0.5 text-xs rounded-full font-medium ${statusCls}">${item.status_pagamento || 'Pendente'}</span>
+        </td>
+        <td class="px-4 py-3 text-xs text-vinho/60">${item.vencimento || '—'}</td>
         <td class="px-4 py-3">
           <div class="flex items-center gap-3">
             <button onclick="editarOrcamento(${i})" title="Editar"
@@ -1298,25 +1346,33 @@
     /* Renderiza a linha no modo edição */
     function linhaOrcamentoEdit(i) {
       const item = orcamento[i];
-      const saldo = item.estimado - item.pago;
+      const saldo = (item.valor_total || 0) - (item.valor_pago || 0);
       const saldoCls = saldo > 0 ? 'text-marsala' : 'text-green-700';
       const inputCls = 'w-full border border-rosa2 bg-white px-2 py-1 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm transition-colors';
+      const statusOpts = ['Pendente','Parcial','Pago'].map(s =>
+        `<option value="${s}" ${(item.status_pagamento||'Pendente')===s?'selected':''}>${s}</option>`).join('');
       return `<tr id="orc-row-${i}" class="bg-rosa/25 ring-1 ring-inset ring-marsala/20">
         <td class="px-3 py-2">
           <input id="ei-forn-${i}" value="${item.fornecedor}" class="${inputCls}" placeholder="Fornecedor" />
         </td>
         <td class="px-3 py-2">
-          <input id="ei-cat-${i}"  value="${item.categoria}"  class="${inputCls}" placeholder="Categoria" />
+          <input id="ei-cat-${i}" value="${item.categoria}" class="${inputCls}" placeholder="Categoria" />
         </td>
         <td class="px-3 py-2">
-          <input id="ei-est-${i}"  value="${item.estimado}" type="number" min="0" step="0.01"
+          <input id="ei-vtotal-${i}" value="${item.valor_total||0}" type="number" min="0" step="0.01"
                  oninput="previewSaldo(${i})" class="${inputCls} text-right" />
         </td>
         <td class="px-3 py-2">
-          <input id="ei-pago-${i}" value="${item.pago}"     type="number" min="0" step="0.01"
+          <input id="ei-vpago-${i}" value="${item.valor_pago||0}" type="number" min="0" step="0.01"
                  oninput="previewSaldo(${i})" class="${inputCls} text-right" />
         </td>
         <td id="ei-saldo-${i}" class="px-4 py-3 text-right font-medium ${saldoCls}">${fmtBRL(saldo)}</td>
+        <td class="px-3 py-2">
+          <select id="ei-status-${i}" class="${inputCls}">${statusOpts}</select>
+        </td>
+        <td class="px-3 py-2">
+          <input id="ei-venc-${i}" value="${item.vencimento||''}" type="date" class="${inputCls}" />
+        </td>
         <td class="px-3 py-2">
           <div class="flex items-center gap-2">
             <button onclick="confirmarEdicao(${i})"
@@ -1350,14 +1406,18 @@
     async function confirmarEdicao(i) {
       const fornecedor = document.getElementById('ei-forn-' + i).value.trim();
       const categoria = document.getElementById('ei-cat-' + i).value.trim();
-      const estimado = parseFloat(document.getElementById('ei-est-' + i).value) || 0;
-      const pago = parseFloat(document.getElementById('ei-pago-' + i).value) || 0;
+      const valor_total = parseFloat(document.getElementById('ei-vtotal-' + i).value) || 0;
+      const valor_pago = parseFloat(document.getElementById('ei-vpago-' + i).value) || 0;
+      const status_pagamento = document.getElementById('ei-status-' + i).value;
+      const vencimento = document.getElementById('ei-venc-' + i).value || '';
       if (!fornecedor) { document.getElementById('ei-forn-' + i).focus(); return; }
       var oldId = orcamento[i].id;
-      orcamento[i] = { id: oldId, fornecedor, categoria, estimado, pago };
+      orcamento[i] = { id: oldId, fornecedor, categoria, valor_total, valor_pago, status_pagamento, vencimento };
       salvar('orcamento', orcamento);
       if (oldId) {
-        try { await _supabase.from('financeiro').update({ fornecedor, categoria, estimado, pago }).eq('id', oldId); } catch(e) { console.warn(e); }
+        try {
+          await _supabase.from('financeiro').update({ fornecedor, categoria, valor_total, valor_pago, status_pagamento, vencimento }).eq('id', oldId);
+        } catch(e) { console.warn(e); }
       }
       document.getElementById('orc-row-' + i).outerHTML = linhaOrcamentoView(i);
       atualizarTotaisOrcamento();
@@ -1365,8 +1425,8 @@
 
     /* Atualiza o saldo ao vivo enquanto o usuário digita */
     function previewSaldo(i) {
-      const est = parseFloat(document.getElementById('ei-est-' + i).value) || 0;
-      const pago = parseFloat(document.getElementById('ei-pago-' + i).value) || 0;
+      const est = parseFloat(document.getElementById('ei-vtotal-' + i).value) || 0;
+      const pago = parseFloat(document.getElementById('ei-vpago-' + i).value) || 0;
       const saldo = est - pago;
       const el = document.getElementById('ei-saldo-' + i);
       el.textContent = fmtBRL(saldo);
@@ -1375,8 +1435,8 @@
 
     /* Atualiza cards de resumo + tfoot */
     function atualizarTotaisOrcamento() {
-      const totEst = orcamento.reduce((s, o) => s + Number(o.estimado), 0);
-      const totPago = orcamento.reduce((s, o) => s + Number(o.pago), 0);
+      const totEst = orcamento.reduce((s, o) => s + Number(o.valor_total || 0), 0);
+      const totPago = orcamento.reduce((s, o) => s + Number(o.valor_pago || 0), 0);
       const totSaldo = totEst - totPago;
       // Cards
       document.getElementById('resumo-estimado').textContent = fmtBRL(totEst);
@@ -1395,10 +1455,12 @@
     async function salvarOrcamento() {
       const fornecedor = document.getElementById('orc-fornecedor').value.trim();
       const categoria = document.getElementById('orc-categoria').value.trim();
-      const estimado = parseFloat(document.getElementById('orc-estimado').value) || 0;
-      const pago = parseFloat(document.getElementById('orc-pago').value) || 0;
+      const valor_total = parseFloat(document.getElementById('orc-valor-total').value) || 0;
+      const valor_pago = parseFloat(document.getElementById('orc-valor-pago').value) || 0;
+      const status_pagamento = document.getElementById('orc-status').value || 'Pendente';
+      const vencimento = document.getElementById('orc-vencimento').value || '';
       if (!fornecedor) return alert('Informe o fornecedor.');
-      var novo = { fornecedor, categoria, estimado, pago };
+      var novo = { fornecedor, categoria, valor_total, valor_pago, status_pagamento, vencimento };
       try {
         var resp = await _supabase.from('financeiro').insert(novo).select();
         if (resp.error) throw resp.error;
@@ -1407,7 +1469,8 @@
       orcamento.push(novo);
       salvar('orcamento', orcamento);
       fecharModal('modal-orcamento');
-      ['orc-fornecedor', 'orc-categoria', 'orc-estimado', 'orc-pago'].forEach(id => document.getElementById(id).value = '');
+      ['orc-fornecedor', 'orc-categoria', 'orc-valor-total', 'orc-valor-pago', 'orc-vencimento'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('orc-status').value = 'Pendente';
       renderizarOrcamento();
     }
 
@@ -1878,11 +1941,51 @@
       }
     }
 
+    /* ── CHECKLIST: helpers Supabase ────────────────── */
+    async function db_carregarChecklist() {
+      try {
+        var resp = await _supabase.from('checklist').select('*').order('id', { ascending: true });
+        if (resp.error) throw resp.error;
+        if (resp.data && resp.data.length > 0) {
+          const gruposMap = {}, grupoOrder = [];
+          for (const row of resp.data) {
+            const g = row.grupo || 'Geral';
+            if (!gruposMap[g]) { gruposMap[g] = { grupo: g, tarefas: [] }; grupoOrder.push(g); }
+            gruposMap[g].tarefas.push({ id: row.id, texto: row.tarefa, feita: !!row.concluido });
+          }
+          checklist = grupoOrder.map(g => gruposMap[g]);
+          salvar('checklist', checklist);
+          return true;
+        }
+        return false;
+      } catch(e) {
+        console.warn('[Supabase] checklist falhou, usando cache:', e);
+        return null;
+      }
+    }
+
+    async function db_seedChecklist() {
+      for (const grupo of checklist) {
+        for (const tarefa of grupo.tarefas) {
+          try {
+            const resp = await _supabase.from('checklist').insert({
+              grupo: grupo.grupo, tarefa: tarefa.texto, concluido: tarefa.feita
+            }).select();
+            if (!resp.error && resp.data && resp.data[0]) tarefa.id = resp.data[0].id;
+          } catch(e) { console.warn('[Supabase] seed checklist:', e); }
+        }
+      }
+      salvar('checklist', checklist);
+    }
+
     /* ── INICIALIZAÇÃO ────────────────────────────── */
     async function inicializar() {
       // Carrega dados (ou usa os dados de exemplo na primeira vez)
       convidados = carregar('convidados', convidadosPadrao);
+      // Checklist: tenta Supabase → se vazio semeia padrão → se erro usa localStorage
       checklist = carregar('checklist', checklistPadrao);
+      var clResult = await db_carregarChecklist();
+      if (clResult === false) { await db_seedChecklist(); }
 
       // Financeiro: carrega do Supabase, fallback para localStorage
       try {
