@@ -1709,7 +1709,7 @@
       }
 
       // Salva no Supabase (tabela historia, como foto)
-      var novo = { url: urlDireta, legenda: legenda };
+      var novo = { url_foto: urlDireta, legenda: legenda };
       try {
         var resp = await _supabase.from('historia').insert(novo).select();
         if (resp.error) throw resp.error;
@@ -1746,7 +1746,7 @@
 
       vazia.classList.add('hidden');
       lista.innerHTML = galeria.map(foto => {
-        const preview = foto.url;
+        const preview = foto.url_foto;
         const legTxt = foto.legenda
           ? `<p class="text-sm text-vinho font-medium truncate mt-0.5">${foto.legenda}</p>`
           : `<p class="text-xs text-vinho/30 italic mt-0.5">Sem legenda</p>`;
@@ -1760,7 +1760,7 @@
               <span style="display:none" class="items-center justify-center w-full h-full text-2xl">🖼️</span>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-xs text-vinho/40 font-mono truncate">${foto.url}</p>
+              <p class="text-xs text-vinho/40 font-mono truncate">${foto.url_foto}</p>
               ${legTxt}
             </div>
             <button onclick="removerFoto(${foto.id})"
@@ -1894,11 +1894,11 @@
       catalogo = dadosCatalogo !== null ? dadosCatalogo : catalogoPadrao.slice();
       if (dadosCatalogo === null) await db_salvarCatalogo(catalogo);
 
-      // Galeria: carrega fotos da tabela historia (rows com url)
+      // Galeria: carrega fotos da tabela historia (rows com url_foto)
       try {
         var respHist = await _supabase.from('historia').select('*');
         if (respHist.error) throw respHist.error;
-        galeria = (respHist.data || []).filter(function(r) { return r && r.url; });
+        galeria = (respHist.data || []).filter(function(r) { return r && r.url_foto; });
         salvar('galeria_fotos', galeria);
       } catch(e) {
         console.warn('[Supabase] historia/galeria falhou, usando cache:', e);
@@ -1997,12 +1997,11 @@
       var dados = await apiGet('historia');
       var texto = '';
       if (Array.isArray(dados)) {
-        var rowTexto = dados.find(function(r) { return r && r.texto; });
-        if (rowTexto) texto = rowTexto.texto;
+        // O texto "Nossa História" fica na legenda do id: 1 (row sem url_foto)
+        var row1 = dados.find(function(r) { return r && r.id === 1; });
+        if (row1) texto = row1.legenda || '';
       } else if (dados && typeof dados === 'object') {
-        texto = dados.texto || '';
-      } else if (typeof dados === 'string') {
-        texto = dados;
+        texto = dados.legenda || '';
       }
       document.getElementById('historia-texto-painel').value = texto || '';
     }
@@ -2012,7 +2011,7 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
       try {
-        await _supabase.from('historia').upsert({ id: 1, texto: texto });
+        await _supabase.from('historia').upsert([{ id: 1, ordem: 0, url_foto: null, legenda: texto, ano: null }]);
       } catch(e) { console.warn('[Supabase] upsert historia texto falhou:', e); }
       localStorage.setItem('texto_nossa_historia', JSON.stringify(texto));
       btn.textContent = 'Salvo ✓';
