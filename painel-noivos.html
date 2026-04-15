@@ -1709,7 +1709,12 @@
       }
 
       // Salva no Supabase (tabela historia, como foto)
-      var novo = { url_foto: urlDireta, legenda: legenda };
+      var novo = {
+        url_foto: urlDireta,
+        legenda: legenda || '',
+        ordem: galeria.length,
+        ano: ''
+      };
       try {
         var resp = await _supabase.from('historia').insert(novo).select();
         if (resp.error) throw resp.error;
@@ -2011,7 +2016,14 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
       try {
-        await _supabase.from('historia').upsert([{ id: 1, ordem: 0, url_foto: null, legenda: texto, ano: null }]);
+        const { error } = await _supabase.from('historia').upsert({
+          id: 1,
+          ordem: 0,
+          url_foto: '',
+          legenda: texto || '',
+          ano: ''
+        });
+        if (error) throw error;
       } catch(e) { console.warn('[Supabase] upsert historia texto falhou:', e); }
       localStorage.setItem('texto_nossa_historia', JSON.stringify(texto));
       btn.textContent = 'Salvo ✓';
