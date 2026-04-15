@@ -682,67 +682,24 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Tabelas single-row (upsert com id=1)
-    const TABELAS_SINGLE = ['configuracoes'];
-
     /* ── apiGet ──────────────────────────────────── */
-    async function apiGet(tabela, localKey, padrao) {
-      if (padrao === undefined) padrao = null;
-      try {
-        var resp = await supabase.from(tabela).select('*');
-        if (resp.error) throw resp.error;
-        var resultado = resp.data;
-        // Single-row: retorna o objeto direto
-        if (TABELAS_SINGLE.includes(tabela) && Array.isArray(resultado) && resultado.length > 0) {
-          resultado = resultado[0];
-        }
-        localStorage.setItem(localKey, JSON.stringify(resultado));
-        return resultado;
-      } catch (err) {
-        console.warn('[Supabase] GET "' + tabela + '" falhou — usando cache local:', err.message || err);
-      }
-      var raw = localStorage.getItem(localKey);
-      return raw ? JSON.parse(raw) : padrao;
+    async function apiGet(tabela) {
+      const { data, error } = await supabase.from(tabela).select('*').order('id', { ascending: true });
+      if (error) { console.error('Erro no GET:', error); return []; }
+      return data;
     }
 
     /* ── apiPost ─────────────────────────────────── */
     async function apiPost(tabela, dados, localKey, modo) {
-      if (!modo) modo = 'replace';
-      // Cache local
       if (modo === 'append') {
-        var arr = [];
-        try { arr = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch(e) {}
-        arr.push(dados);
-        localStorage.setItem(localKey, JSON.stringify(arr));
+        const { error } = await supabase.from(tabela).insert([dados]);
+        if (error) console.error('Erro no POST append:', error);
+        return !error;
       } else {
-        localStorage.setItem(localKey, JSON.stringify(dados));
-      }
-      try {
-        var result;
-        if (modo === 'append') {
-          // Insert de uma linha (RSVP)
-          console.log('Enviando para Supabase (insert):', tabela, dados);
-          result = await supabase.from(tabela).insert(dados);
-        } else if (TABELAS_SINGLE.includes(tabela)) {
-          // Upsert single-row (Configuracoes, Historia)
-          var payload = Object.assign({ id: 1 }, dados);
-          console.log('Enviando para Supabase (upsert):', tabela, payload);
-          result = await supabase.from(tabela).upsert(payload);
-        } else {
-          // Replace total (Presentes): limpa e reinsere
-          console.log('Enviando para Supabase (replace):', tabela, dados);
-          await supabase.from(tabela).delete().gte('id', 0);
-          if (Array.isArray(dados) && dados.length > 0) {
-            result = await supabase.from(tabela).insert(dados);
-          } else {
-            result = { error: null };
-          }
-        }
-        if (result.error) throw result.error;
-        return true;
-      } catch (err) {
-        console.warn('[Supabase] POST "' + tabela + '" falhou:', err.message || err);
-        return false;
+        // Para tabelas de linha única como configuracoes (ID 1)
+        const { error } = await supabase.from(tabela).upsert({ id: 1, ...dados });
+        if (error) console.error('Erro no POST upsert:', error);
+        return !error;
       }
     }
   </script>
@@ -1028,7 +985,7 @@
 
     // ── DATA LAYER ─────────────────────────────────────
     async function carregarCatalogoPub() {
-      const dados = await apiGet('presentes', 'presentes_catalogo', []);
+      const dados = await apiGet('presentes');
       const norm = Array.isArray(dados) ? dados.map(presenteDeApi) : [];
       return norm.filter(i => i.ativo);
     }
@@ -1061,11 +1018,13 @@
     }
 
     async function salvarReservaPub(id, reserva) {
-      const raw = await apiGet('presentes', 'presentes_catalogo', []);
-      const todos = Array.isArray(raw) ? raw.map(presenteDeApi) : [];
-      const idx = todos.findIndex(i => i.id === id);
-      if (idx > -1) { todos[idx].reservadoPor = reserva; }
-      await apiPost('presentes', todos.map(presenteParaApi), 'presentes_catalogo');
+      const updateData = {
+        reservado_por: reserva ? (reserva.nome || '') : '',
+        whats_reserva: reserva ? (reserva.whats || '') : '',
+        data_reserva: reserva ? (reserva.data || '') : ''
+      };
+      const { error } = await supabase.from('presentes').update(updateData).eq('id', id);
+      if (error) console.error('Erro ao salvar reserva:', error);
     }
 
     // ── ESTADO ─────────────────────────────────────────
@@ -1296,7 +1255,7 @@
 
     async function renderizarGaleriaSite() {
       // Lê fotos da tabela 'historia' (rows com url não-vazio)
-      var dados = await apiGet('historia', 'galeria_fotos', []);
+      var dados = await apiGet('historia');
       var fotos = Array.isArray(dados) ? dados.filter(function(r) { return r && r.url; }) : [];
 
       const container = document.getElementById('galeria-dinamica');
@@ -1395,7 +1354,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', async function () {
       // Texto da "Nossa História" — vem da tabela 'historia', campo 'texto' da primeira row
-      var dados = await apiGet('historia', 'texto_nossa_historia', []);
+      var dados = await apiGet('historia');
       var texto = '';
       if (Array.isArray(dados)) {
         var rowTexto = dados.find(function(r) { return r && r.texto; });

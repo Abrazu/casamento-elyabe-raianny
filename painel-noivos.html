@@ -823,67 +823,24 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Tabelas single-row (upsert com id=1)
-    const TABELAS_SINGLE = ['configuracoes'];
-
     /* ── apiGet ──────────────────────────────────── */
-    async function apiGet(tabela, localKey, padrao) {
-      if (padrao === undefined) padrao = null;
-      try {
-        var resp = await supabase.from(tabela).select('*');
-        if (resp.error) throw resp.error;
-        var resultado = resp.data;
-        // Single-row: retorna o objeto direto
-        if (TABELAS_SINGLE.includes(tabela) && Array.isArray(resultado) && resultado.length > 0) {
-          resultado = resultado[0];
-        }
-        localStorage.setItem(localKey, JSON.stringify(resultado));
-        return resultado;
-      } catch (err) {
-        console.warn('[Supabase] GET "' + tabela + '" falhou — usando cache local:', err.message || err);
-      }
-      var raw = localStorage.getItem(localKey);
-      return raw ? JSON.parse(raw) : padrao;
+    async function apiGet(tabela) {
+      const { data, error } = await supabase.from(tabela).select('*').order('id', { ascending: true });
+      if (error) { console.error('Erro no GET:', error); return []; }
+      return data;
     }
 
     /* ── apiPost ─────────────────────────────────── */
     async function apiPost(tabela, dados, localKey, modo) {
-      if (!modo) modo = 'replace';
-      // Cache local
       if (modo === 'append') {
-        var arr = [];
-        try { arr = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch(e) {}
-        arr.push(dados);
-        localStorage.setItem(localKey, JSON.stringify(arr));
+        const { error } = await supabase.from(tabela).insert([dados]);
+        if (error) console.error('Erro no POST append:', error);
+        return !error;
       } else {
-        localStorage.setItem(localKey, JSON.stringify(dados));
-      }
-      try {
-        var result;
-        if (modo === 'append') {
-          // Insert de uma linha (RSVP)
-          console.log('Enviando para Supabase (insert):', tabela, dados);
-          result = await supabase.from(tabela).insert(dados);
-        } else if (TABELAS_SINGLE.includes(tabela)) {
-          // Upsert single-row (Configuracoes, Historia)
-          var payload = Object.assign({ id: 1 }, dados);
-          console.log('Enviando para Supabase (upsert):', tabela, payload);
-          result = await supabase.from(tabela).upsert(payload);
-        } else {
-          // Replace total (Presentes): limpa e reinsere
-          console.log('Enviando para Supabase (replace):', tabela, dados);
-          await supabase.from(tabela).delete().gte('id', 0);
-          if (Array.isArray(dados) && dados.length > 0) {
-            result = await supabase.from(tabela).insert(dados);
-          } else {
-            result = { error: null };
-          }
-        }
-        if (result.error) throw result.error;
-        return true;
-      } catch (err) {
-        console.warn('[Supabase] POST "' + tabela + '" falhou:', err.message || err);
-        return false;
+        // Para tabelas de linha única como configuracoes (ID 1)
+        const { error } = await supabase.from(tabela).upsert({ id: 1, ...dados });
+        if (error) console.error('Erro no POST upsert:', error);
+        return !error;
       }
     }
 
@@ -1491,13 +1448,19 @@
     }
 
     async function db_lerCatalogo() {
-      const raw = await apiGet('presentes', 'presentes_catalogo', null);
+      const raw = await apiGet('presentes');
       if (!Array.isArray(raw)) return raw;
       return raw.map(presenteDeApi);
     }
 
     async function db_salvarCatalogo(dados) {
-      await apiPost('presentes', dados.map(presenteParaApi), 'presentes_catalogo');
+      // Row-level upsert: cada item com seu ID
+      for (const item of dados) {
+        const row = presenteParaApi(item);
+        if (item.id) row.id = item.id;
+        const { error } = await supabase.from('presentes').upsert(row);
+        if (error) console.error('Erro ao salvar presente:', error);
+      }
     }
 
     /* ── CATÁLOGO ─────────────────────────────────────── */
@@ -1605,18 +1568,29 @@
       // Drive → thumbnail; link externo → mantém intacto
       const imagem = montarUrlPresente(imagemRaw);
 
-      if (editandoId) {
-        const idx = catalogo.findIndex(i => i.id === editandoId);
-        if (idx > -1) catalogo[idx] = { ...catalogo[idx], nome, imagem, descricao, ativo };
-      } else {
-        catalogo.push({ id: Date.now(), nome, imagem, descricao, ativo, reservadoPor: null });
-      }
-
       const btn = document.getElementById('btn-salvar-item');
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
 
-      await db_salvarCatalogo(catalogo);
+      if (editandoId) {
+        const idx = catalogo.findIndex(i => i.id === editandoId);
+        if (idx > -1) {
+          catalogo[idx] = { ...catalogo[idx], nome, imagem, descricao, ativo };
+          const row = presenteParaApi(catalogo[idx]);
+          await supabase.from('presentes').update(row).eq('id', editandoId);
+        }
+      } else {
+        const row = { nome, descricao, imagem, ativo, reservado_por: '', whats_reserva: '', data_reserva: '' };
+        try {
+          const resp = await supabase.from('presentes').insert(row).select();
+          if (resp.error) throw resp.error;
+          const newId = resp.data && resp.data[0] ? resp.data[0].id : Date.now();
+          catalogo.push({ id: newId, nome, imagem, descricao, ativo, reservadoPor: null });
+        } catch(e) {
+          console.warn('[Supabase] insert presente falhou:', e);
+          catalogo.push({ id: Date.now(), nome, imagem, descricao, ativo, reservadoPor: null });
+        }
+      }
 
       btn.disabled = false;
       btn.textContent = 'Salvar';
@@ -1630,7 +1604,8 @@
       const item = catalogo.find(i => i.id === id);
       if (!item) return;
       item.ativo = !item.ativo;
-      await db_salvarCatalogo(catalogo);
+      const { error } = await supabase.from('presentes').update({ ativo: item.ativo }).eq('id', id);
+      if (error) console.error('Erro ao toggle ativo:', error);
       renderizarGerItens();
     }
 
@@ -1641,8 +1616,8 @@
         ? `"${item.nome}" já está reservado. Remover mesmo assim?`
         : `Remover "${item.nome}"?`;
       if (!confirm(msg)) return;
+      try { await supabase.from('presentes').delete().eq('id', id); } catch(e) { console.warn(e); }
       catalogo = catalogo.filter(i => i.id !== id);
-      await db_salvarCatalogo(catalogo);
       renderizarGerItens();
       renderizarRecebidos();
     }
@@ -1651,7 +1626,8 @@
       const item = catalogo.find(i => i.id === id);
       if (!item || !confirm(`Liberar a reserva de "${item.nome}"?`)) return;
       item.reservadoPor = null;
-      await db_salvarCatalogo(catalogo);
+      const { error } = await supabase.from('presentes').update({ reservado_por: '', whats_reserva: '', data_reserva: '' }).eq('id', id);
+      if (error) console.error('Erro ao liberar reserva:', error);
       renderizarGerItens();
       renderizarRecebidos();
     }
@@ -1804,7 +1780,7 @@
 
     /* ── INBOX DE RSVP (vindos do site) ─────────────────── */
     async function carregarInbox() {
-      const pendentes = await apiGet('rsvp', 'rsvp_pendentes', []);
+      const pendentes = await apiGet('rsvp');
       const badge = document.getElementById('badge-rsvp');
       const inbox = document.getElementById('rsvp-inbox');
       const lista = document.getElementById('rsvp-inbox-lista');
@@ -1854,7 +1830,7 @@
     }
 
     async function importarRSVP(i) {
-      const pendentes = await apiGet('rsvp', 'rsvp_pendentes', []);
+      const pendentes = await apiGet('rsvp');
       const r = pendentes[i];
 
       // Adiciona o convidado principal
@@ -1877,7 +1853,7 @@
     }
 
     async function dispensarRSVP(i) {
-      const pendentes = await apiGet('rsvp', 'rsvp_pendentes', []);
+      const pendentes = await apiGet('rsvp');
       const r = pendentes[i];
       if (r && r.id) {
         try { await supabase.from('rsvp').delete().eq('id', r.id); } catch(e) { console.warn(e); }
@@ -1939,8 +1915,13 @@
 
     /* ── CONFIGURAÇÕES GERAIS ───────────────────── */
     async function carregarConfiguracoes() {
-      var cfg = await apiGet('configuracoes', 'configuracoes_site', {});
-      if (!cfg || typeof cfg !== 'object') cfg = {};
+      var dados = await apiGet('configuracoes');
+      var cfg = {};
+      if (Array.isArray(dados) && dados.length > 0) {
+        cfg = dados[0];
+      } else if (dados && typeof dados === 'object' && !Array.isArray(dados)) {
+        cfg = dados;
+      }
       document.getElementById('cfg-noivo').value = cfg.noivo || '';
       document.getElementById('cfg-noiva').value = cfg.noiva || '';
       document.getElementById('cfg-iniciais').value = cfg.iniciais || '';
@@ -1949,6 +1930,8 @@
       document.getElementById('cfg-senha-noivos').value = cfg.senha_noivos || '';
       document.getElementById('cfg-cor-marsala').value = cfg.cor_marsala || '#8E3B46';
       document.getElementById('cfg-cor-rosa').value = cfg.cor_rosa || '#F5D0D8';
+      // Salva no localStorage para uso pelo site de convidados
+      localStorage.setItem('configuracoes_site', JSON.stringify(cfg));
     }
 
     async function salvarConfiguracoes(btn) {
@@ -1965,6 +1948,7 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
       await apiPost('configuracoes', cfg, 'configuracoes_site');
+      localStorage.setItem('configuracoes_site', JSON.stringify(cfg));
       btn.textContent = 'Salvo ✓';
       setTimeout(function () { btn.textContent = 'Salvar Configurações'; btn.disabled = false; }, 2000);
     }
@@ -1985,6 +1969,7 @@
       btn.innerHTML = '<span class="btn-spinner"></span>Resetando…';
 
       await apiPost('configuracoes', cfg, 'configuracoes_site');
+      localStorage.setItem('configuracoes_site', JSON.stringify(cfg));
 
       btn.textContent = 'Cores Resetadas ✓';
       setTimeout(function () {
@@ -1995,7 +1980,7 @@
 
     /* ── NOSSA HISTÓRIA ───────────────────────────────── */
     async function carregarTextoHistoria() {
-      var dados = await apiGet('historia', 'texto_nossa_historia', []);
+      var dados = await apiGet('historia');
       var texto = '';
       if (Array.isArray(dados)) {
         var rowTexto = dados.find(function(r) { return r && r.texto; });
