@@ -3,12 +3,11 @@
 
 <head>
   <script>
-    const l = sessionStorage.getItem('logado');
-    const lt = sessionStorage.getItem('logado_time');
-    if (l !== 'true' || !lt || (Date.now() - parseInt(lt)) > 86400000) {
-      sessionStorage.clear();
-      window.location.href = 'index.html';
-    }
+    (function() {
+      if (localStorage.getItem('logado') !== 'true') {
+        window.location.replace('index.html');
+      }
+    })();
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -236,85 +235,7 @@
   </style>
 </head>
 
-<body class="bg-offwhite text-vinho font-sans bloqueado">
-
-  <!-- ═══════════════════════════════════════════
-       LOCK SCREEN
-  ════════════════════════════════════════════ -->
-  <div id="lock-screen" class="fixed inset-0 z-[999] flex items-center justify-center px-6 overflow-hidden"
-    style="background-color:rgb(var(--color-marsala-rgb));">
-
-    <!-- Blobs decorativos -->
-    <div class="absolute -top-40 -left-40 w-[28rem] h-[28rem] rounded-full blur-3xl pointer-events-none"
-      style="background:rgb(var(--color-marsala2-rgb)); opacity:.55;"></div>
-    <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full blur-3xl pointer-events-none"
-      style="background:rgb(var(--color-rosa-rgb)); opacity:.12;"></div>
-    <div
-      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[36rem] h-[36rem] rounded-full blur-3xl pointer-events-none"
-      style="background:rgb(var(--color-marsala2-rgb)); opacity:.35;"></div>
-
-    <!-- Conteúdo central -->
-    <div class="relative z-10 flex flex-col items-center gap-8 w-full max-w-xs text-center">
-
-      <!-- Ornamento superior -->
-      <p class="text-xs tracking-[0.45em] uppercase font-sans" style="color:rgba(245,208,216,.5);">Bem-vindo ao nosso
-        site</p>
-
-      <!-- Nomes -->
-      <div class="flex flex-col items-center gap-1">
-        <h1 id="lock-noivo" class="font-serif leading-none" style="font-size:clamp(2.8rem,8vw,4.5rem); color:#FFF8F9;">
-          Elyabe
-        </h1>
-        <span class="font-serif italic text-4xl" style="color:rgba(245,208,216,.7);">&amp;</span>
-        <h1 id="lock-noiva" class="font-serif leading-none" style="font-size:clamp(2.8rem,8vw,4.5rem); color:#FFF8F9;">
-          Raianny
-        </h1>
-      </div>
-
-      <!-- Data -->
-      <p id="lock-data" class="text-xs tracking-[0.35em] uppercase font-sans" style="color:rgba(245,208,216,.45);">18 ·
-        09 · 2027</p>
-
-      <!-- Divisor -->
-      <div class="flex items-center gap-3 w-full" style="color:rgba(245,208,216,.25);">
-        <div class="flex-1 h-px" style="background:rgba(245,208,216,.25);"></div>
-        <span class="font-serif text-base" style="color:rgba(245,208,216,.5);">✦</span>
-        <div class="flex-1 h-px" style="background:rgba(245,208,216,.25);"></div>
-      </div>
-
-      <!-- Formulário de senha -->
-      <div class="w-full flex flex-col gap-3">
-        <label class="text-xs tracking-[0.3em] uppercase font-sans" style="color:rgba(245,208,216,.55);">Senha dos
-          Convidados</label>
-
-        <input id="lock-input" type="password" autocomplete="current-password" placeholder="············"
-          onkeydown="if(event.key==='Enter')verificarLock()"
-          class="w-full px-4 py-3 text-sm text-center rounded-sm focus:outline-none transition-all duration-200 font-sans"
-          style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
-                      color:#FFF8F9; letter-spacing:.2em;" />
-
-        <p id="lock-erro" class="hidden text-xs italic font-sans" style="color:rgba(245,208,216,.7);">Senha incorreta.
-          Tente novamente.</p>
-
-        <button onclick="verificarLock()"
-          class="w-full py-3 rounded-sm text-xs tracking-[0.35em] uppercase font-sans transition-all duration-200"
-          style="background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); color:#FFF8F9;"
-          onmouseover="this.style.background='rgba(255,255,255,.22)'"
-          onmouseout="this.style.background='rgba(255,255,255,.12)'">
-          Entrar
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Verificação antecipada de sessão — executa antes do primeiro frame -->
-  <script>
-    if (sessionStorage.getItem('convidado_auth') === '1') {
-      document.getElementById('lock-screen').style.display = 'none';
-      document.body.classList.remove('bloqueado');
-    }
-  </script>
+<body class="bg-offwhite text-vinho font-sans">
 
   <!-- ═══════════════════════════════════════════
        NAVEGAÇÃO
@@ -859,43 +780,6 @@
       el.onclick = null;
       el.classList.remove('opacity-50', 'cursor-not-allowed');
     }
-  </script>
-
-  <!-- ═══════════════════════════════════════════
-       LOCK SCREEN — VERIFICAÇÃO DE SENHA
-  ════════════════════════════════════════════ -->
-  <script>
-    var _cfgLk = {};
-    try { _cfgLk = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
-    const SENHA_CONVIDADOS = _cfgLk.senha_convidados || 'Casamento2026';
-
-    function verificarLock() {
-      const val = document.getElementById('lock-input').value;
-      if (val === SENHA_CONVIDADOS) {
-        sessionStorage.setItem('convidado_auth', '1');
-        document.body.classList.remove('bloqueado');
-        const lock = document.getElementById('lock-screen');
-        lock.classList.add('saindo');
-        // Remove do DOM após a transição para não interferir com o site
-        lock.addEventListener('transitionend', () => lock.remove(), { once: true });
-      } else {
-        const erro = document.getElementById('lock-erro');
-        const inp = document.getElementById('lock-input');
-        erro.classList.remove('hidden');
-        inp.value = '';
-        inp.focus();
-        // Vibração visual no input
-        inp.style.borderColor = 'rgba(245,208,216,.7)';
-        setTimeout(() => inp.style.borderColor = 'rgba(255,255,255,.18)', 1200);
-      }
-    }
-
-    // Foca o campo automaticamente ao carregar
-    document.addEventListener('DOMContentLoaded', () => {
-      if (sessionStorage.getItem('convidado_auth') !== '1') {
-        document.getElementById('lock-input')?.focus();
-      }
-    });
   </script>
 
   <!-- ═══════════════════════════════════════════

@@ -1,58 +1,153 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Acesso Convidados</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acesso Restrito - Elyabe & Raianny</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['Cinzel', 'serif'],
+            sans: ['Lato', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
     :root {
+      /* Estilo Padrão Inicial (sobrescrito depois via script se configurado) */
       --color-marsala-rgb: 142 59 70;
       --color-marsala2-rgb: 112 29 40;
       --color-rosa-rgb: 245 208 216;
       --color-rosa2-rgb: 232 195 203;
     }
-    .bg-marsala { background-color: rgb(var(--color-marsala-rgb)); }
-    .bg-marsala2 { background-color: rgb(var(--color-marsala2-rgb)); }
-    .text-vinho { color: #4A1C24; }
-    .bg-rosa2 { background-color: rgb(var(--color-rosa2-rgb)); }
-    
+
+    body {
+      background-color: rgb(var(--color-marsala-rgb));
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    @keyframes btn-spin {
+      to { transform: rotate(360deg); }
+    }
     .btn-spinner {
       display: none;
       width: 14px;
       height: 14px;
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      border-top-color: #fff;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: btn-spin .7s linear infinite;
+      vertical-align: middle;
       margin-right: 8px;
     }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
   </style>
+
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-[#FFFDFB] min-h-screen flex items-center justify-center font-sans px-4">
-  <div class="bg-white rounded-sm shadow-2xl p-8 w-full max-w-sm flex flex-col gap-5 border border-rosa2/30 text-center">
-    <div class="w-14 h-14 mx-auto rounded-full bg-rosa2/40 flex items-center justify-center mb-2">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-vinho" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-      </svg>
+
+<body>
+  <div id="lock-screen" class="fixed inset-0 z-[999] flex items-center justify-center px-6 overflow-hidden">
+    <!-- Blobs decorativos -->
+    <div class="absolute -top-40 -left-40 w-[28rem] h-[28rem] rounded-full blur-3xl pointer-events-none"
+      style="background:rgb(var(--color-marsala2-rgb)); opacity:.55;"></div>
+    <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full blur-3xl pointer-events-none"
+      style="background:rgb(var(--color-rosa-rgb)); opacity:.12;"></div>
+    <div
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[36rem] h-[36rem] rounded-full blur-3xl pointer-events-none"
+      style="background:rgb(var(--color-marsala2-rgb)); opacity:.35;"></div>
+
+    <!-- Conteúdo central -->
+    <div class="relative z-10 flex flex-col items-center gap-8 w-full max-w-xs text-center">
+
+      <!-- Ornamento superior -->
+      <p class="text-xs tracking-[0.45em] uppercase font-sans" style="color:rgba(245,208,216,.5);">Bem-vindo ao nosso site</p>
+
+      <!-- Nomes -->
+      <div class="flex flex-col items-center gap-1">
+        <h1 id="lock-noivo" class="font-serif leading-none" style="font-size:clamp(2.8rem,8vw,4.5rem); color:#FFF8F9;">
+          Elyabe
+        </h1>
+        <span class="font-serif italic text-4xl" style="color:rgba(245,208,216,.7);">&amp;</span>
+        <h1 id="lock-noiva" class="font-serif leading-none" style="font-size:clamp(2.8rem,8vw,4.5rem); color:#FFF8F9;">
+          Raianny
+        </h1>
+      </div>
+
+      <!-- Divisor -->
+      <div class="flex items-center gap-3 w-full mt-2 mb-2" style="color:rgba(245,208,216,.25);">
+        <div class="flex-1 h-px" style="background:rgba(245,208,216,.25);"></div>
+        <span class="font-serif text-base" style="color:rgba(245,208,216,.5);">✦</span>
+        <div class="flex-1 h-px" style="background:rgba(245,208,216,.25);"></div>
+      </div>
+
+      <!-- Formulário de senha -->
+      <div class="w-full flex flex-col gap-3">
+        <label class="text-xs tracking-[0.3em] uppercase font-sans" style="color:rgba(245,208,216,.55);">Senha dos Convidados</label>
+
+        <input id="lock-input" type="password" autocomplete="current-password" placeholder="············"
+          onkeydown="if(event.key==='Enter')testarSenha()"
+          class="w-full px-4 py-3 text-sm text-center rounded-sm focus:outline-none transition-all duration-200 font-sans"
+          style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); color:#FFF8F9; letter-spacing:.2em;" autofocus />
+
+        <p id="lock-erro" class="hidden text-xs italic font-sans" style="color:rgba(245,208,216,.7);">Senha incorreta. Tente novamente.</p>
+
+        <button id="btn-login" onclick="testarSenha()"
+          class="w-full py-3 rounded-sm text-xs tracking-[0.35em] uppercase font-sans transition-all duration-200 flex items-center justify-center"
+          style="background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); color:#FFF8F9;"
+          onmouseover="this.style.background='rgba(255,255,255,.22)'"
+          onmouseout="this.style.background='rgba(255,255,255,.12)'">
+          <span class="btn-spinner" id="spinner"></span>Entrar
+        </button>
+      </div>
+
     </div>
-    
-    <h2 class="text-xl font-serif text-vinho">Acesso Restrito</h2>
-    <p class="text-xs text-vinho/60 mb-2">Digite a senha dos convidados para entrar no site do casamento.</p>
-    
-    <input id="pass-input" type="password" placeholder="Sua senha" 
-           class="w-full border border-rosa2 px-4 py-3 text-sm text-center text-vinho placeholder:text-vinho/30 focus:outline-none focus:border-marsala rounded-sm bg-[#FFFDFB]"
-           onkeydown="if(event.key==='Enter') testarSenha()" autofocus />
-    
-    <button id="btn-login" onclick="testarSenha()" 
-            class="w-full py-3 mt-2 bg-marsala text-white text-xs uppercase tracking-widest rounded-sm hover:opacity-90 flex items-center justify-center transition-opacity">
-      <span class="btn-spinner" id="spinner"></span>Entrar
-    </button>
   </div>
 
   <script>
+    // Recupera dados locais provisórios (Cores, Nomes)
+    try {
+      var cfgLocal = JSON.parse(localStorage.getItem('configuracoes_site') || '{}');
+      if (cfgLocal.noivo) document.getElementById('lock-noivo').textContent = cfgLocal.noivo;
+      if (cfgLocal.noiva) document.getElementById('lock-noiva').textContent = cfgLocal.noiva;
+      
+      // Aplicar cores dinâmicas para espelhar a mesma paleta
+      function hexRgb(h) {
+        if (!h || h.length < 7) return null;
+        return parseInt(h.slice(1,3),16)+' '+parseInt(h.slice(3,5),16)+' '+parseInt(h.slice(5,7),16);
+      }
+      function escurecer(h, a) {
+        if (!h || h.length < 7) return null;
+        return Math.max(0,parseInt(h.slice(1,3),16)-a)+' '+Math.max(0,parseInt(h.slice(3,5),16)-a)+' '+Math.max(0,parseInt(h.slice(5,7),16)-a);
+      }
+      var r = document.documentElement;
+      if (cfgLocal.cor_marsala) {
+        var m = hexRgb(cfgLocal.cor_marsala);
+        if (m) { r.style.setProperty('--color-marsala-rgb', m); r.style.setProperty('--color-marsala2-rgb', escurecer(cfgLocal.cor_marsala, 30)); }
+      }
+      if (cfgLocal.cor_rosa) {
+        var ro = hexRgb(cfgLocal.cor_rosa);
+        if (ro) { r.style.setProperty('--color-rosa-rgb', ro); r.style.setProperty('--color-rosa2-rgb', escurecer(cfgLocal.cor_rosa, 13)); }
+      }
+    } catch(e){}
+
     const SUPABASE_URL = 'https://etmuifggjeshiuhccnvk.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -66,62 +161,48 @@
     async function testarSenha() {
       const btn = document.getElementById('btn-login');
       const spinner = document.getElementById('spinner');
-      const input = document.getElementById('pass-input');
+      const input = document.getElementById('lock-input');
+      const erro = document.getElementById('lock-erro');
       const pw = input.value.trim();
 
       if (!pw) {
-        input.style.borderColor = '#8E3B46';
+        input.style.borderColor = 'rgba(245,208,216,.7)';
         input.focus();
-        setTimeout(() => input.style.borderColor = '', 1200);
+        setTimeout(() => input.style.borderColor = 'rgba(255,255,255,.18)', 1200);
         return;
       }
 
       btn.disabled = true;
       spinner.style.display = 'inline-block';
-      btn.style.opacity = '0.7';
-
+      
       try {
         const dados = await apiGet('configuracoes');
-        let senhaCorreta = 'Casamento2026';
+        let senhaCorreta = 'Casamento2026'; // Default fallback
         if (dados && dados.length > 0) {
           senhaCorreta = dados[0].senha_convidados || senhaCorreta;
-          // Salva pra pegar as cores do tema
+          // Salva objeto no LocalStorage para compartilhar Nomes e Cores com home.html sem flicker
           localStorage.setItem('configuracoes_site', JSON.stringify(dados[0]));
         }
 
         if (pw === senhaCorreta) {
-          sessionStorage.setItem('logado', 'true');
-          sessionStorage.setItem('logado_time', Date.now().toString());
-          window.location.href = 'home.html';
+          localStorage.setItem('logado', 'true');
+          window.location.replace('home.html');
         } else {
           input.value = '';
-          input.placeholder = 'Senha Incorreta!';
-          input.style.borderColor = '#8E3B46';
+          erro.classList.remove('hidden');
+          input.style.borderColor = 'rgba(245,208,216,.7)';
           input.focus();
           setTimeout(() => {
-            input.placeholder = 'Sua senha';
-            input.style.borderColor = '';
-          }, 1500);
+            input.style.borderColor = 'rgba(255,255,255,.18)';
+          }, 1200);
         }
       } catch (e) {
         console.error('Erro de validação:', e);
       } finally {
         btn.disabled = false;
         spinner.style.display = 'none';
-        btn.style.opacity = '1';
       }
     }
-    
-    // Auto-login se a sessão de 24h ainda for válida
-    document.addEventListener('DOMContentLoaded', () => {
-      const l = sessionStorage.getItem('logado');
-      const lt = sessionStorage.getItem('logado_time');
-      if (l === 'true' && lt) {
-        if (Date.now() - parseInt(lt) < 86400000) { // 24h
-          window.location.href = 'home.html';
-        }
-      }
-    });
   </script>
 </body>
 </html>
