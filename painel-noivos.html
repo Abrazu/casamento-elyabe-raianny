@@ -534,6 +534,12 @@
                             transition-colors rounded-sm" />
             </div>
             <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Ano</label>
+              <input id="gal-ano" type="number" placeholder="Ex: 2024" class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala
+                            transition-colors rounded-sm" />
+            </div>
+            <div>
               <button onclick="adicionarFoto()" class="px-6 py-2.5 bg-marsala text-offwhite text-xs tracking-widest uppercase
                              hover:bg-marsala2 active:scale-95 transition-all duration-200 rounded-sm">
                 + Adicionar Foto
@@ -620,8 +626,14 @@
                             placeholder:text-vinho/30 focus:outline-none focus:border-marsala transition-colors rounded-sm" />
             </div>
             <div>
-              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Iniciais (ex: E & R)</label>
-              <input id="cfg-iniciais" type="text" placeholder="E & R"
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Chave PIX</label>
+              <input id="cfg-pix" type="text" placeholder="CPF/Celular/Email"
+                class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
+                            placeholder:text-vinho/30 focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+            </div>
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Meta Arrecadação (R$)</label>
+              <input id="cfg-meta" type="number" placeholder="Ex: 5000"
                 class="w-full border border-rosa2 bg-offwhite px-4 py-2.5 text-sm text-vinho
                             placeholder:text-vinho/30 focus:outline-none focus:border-marsala transition-colors rounded-sm" />
             </div>
@@ -835,30 +847,45 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    /* ── apiGet ──────────────────────────────────── */
+    // Função Universal para buscar dados (GET)
     async function apiGet(tabela) {
-      const { data, error } = await _supabase.from(tabela.toLowerCase()).select('*').order('id', { ascending: true });
-      if (error) { console.error('Erro no GET:', error); return []; }
-      return data;
+        const { data, error } = await _supabase
+            .from(tabela.toLowerCase())
+            .select('*')
+            .order('id', { ascending: true });
+        
+        if (error) {
+            console.error(`Erro ao buscar ${tabela}:`, error.message);
+            return [];
+        }
+        return data;
     }
 
-    /* ── apiPost ─────────────────────────────────── */
+    // Função Universal para salvar dados (POST/UPSERT)
     async function apiPost(tabela, dados, localKey, modo) {
-      const tabelaMin = tabela.toLowerCase();
-      try {
-        if (modo === 'append') {
-          const { error } = await _supabase.from(tabelaMin).insert([dados]);
-          if (error) throw error;
-        } else {
-          // Para tabelas de linha única como configuracoes e historia (ID 1)
-          const { error } = await _supabase.from(tabelaMin).upsert({ id: 1, ...dados });
-          if (error) throw error;
+        const tabelaMin = tabela.toLowerCase();
+        
+        // Limpeza de dados: Remove campos que não existem no banco (evita erro 400)
+        const { aba, modo: m, ...dadosLimpos } = dados;
+
+        try {
+            if (modo === 'append') {
+                // Para RSVP, Financeiro, Checklist e Recebidos
+                const { error } = await _supabase.from(tabelaMin).insert([dadosLimpos]);
+                if (error) throw error;
+            } else {
+                // Para Configurações e História (Usa o ID como âncora)
+                // Garante que o ID seja um número para não dar erro de tipo
+                if (dadosLimpos.id) dadosLimpos.id = parseInt(dadosLimpos.id);
+                
+                const { error } = await _supabase.from(tabelaMin).upsert(dadosLimpos);
+                if (error) throw error;
+            }
+            return true;
+        } catch (err) {
+            console.error(`Erro ao salvar em ${tabelaMin}:`, err.message);
+            return false;
         }
-        return true;
-      } catch (err) {
-        console.error('Erro no POST:', err.message);
-        return false;
-      }
     }
 
     /* ── SENHA ─────────────────────────────────────────── */
@@ -1210,20 +1237,12 @@
       const texto = document.getElementById('cl-nova-' + gi).value.trim();
       if (!texto) return;
       const grupoNome = checklist[gi].grupo;
-      const tarefa = { texto, feita: false };
-      checklist[gi].tarefas.push(tarefa);
-      salvar('checklist', checklist);
+      
+      await apiPost('checklist', { grupo: grupoNome, tarefa: texto, concluido: false }, null, 'append');
+      await db_carregarChecklist();
+      
       renderizarChecklist();
       mostrarAddTarefa(gi);
-      try {
-        const resp = await _supabase.from('checklist').insert({
-          grupo: grupoNome, tarefa: texto, concluido: false
-        }).select();
-        if (!resp.error && resp.data && resp.data[0]) {
-          tarefa.id = resp.data[0].id;
-          salvar('checklist', checklist);
-        }
-      } catch(e) { console.warn('[Supabase] insert checklist:', e); }
     }
 
     /* Remover tarefa */
@@ -1460,14 +1479,13 @@
       const status_pagamento = document.getElementById('orc-status').value || 'Pendente';
       const vencimento = document.getElementById('orc-vencimento').value || '';
       if (!fornecedor) return alert('Informe o fornecedor.');
+      
       var novo = { fornecedor, categoria, valor_total, valor_pago, status_pagamento, vencimento };
-      try {
-        var resp = await _supabase.from('financeiro').insert(novo).select();
-        if (resp.error) throw resp.error;
-        if (resp.data && resp.data[0]) novo.id = resp.data[0].id;
-      } catch(e) { console.warn('[Supabase] insert financeiro falhou:', e); }
-      orcamento.push(novo);
+      await apiPost('financeiro', novo, null, 'append');
+      
+      orcamento = await apiGet('financeiro');
       salvar('orcamento', orcamento);
+      
       fecharModal('modal-orcamento');
       ['orc-fornecedor', 'orc-categoria', 'orc-valor-total', 'orc-valor-pago', 'orc-vencimento'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('orc-status').value = 'Pendente';
@@ -1758,6 +1776,7 @@
     async function adicionarFoto() {
       const input = document.getElementById('gal-url');
       const legenda = document.getElementById('gal-legenda').value.trim();
+      const ano = document.getElementById('gal-ano').value.trim();
       const raw = input.value.trim();
 
       if (!raw) { input.focus(); return; }
@@ -1776,7 +1795,7 @@
         url_foto: urlDireta,
         legenda: legenda || '',
         ordem: galeria.length,
-        ano: ''
+        ano: ano || ''
       };
       try {
         var resp = await _supabase.from('historia').insert(novo).select();
@@ -1787,6 +1806,7 @@
       salvar('galeria_fotos', galeria);
       input.value = '';
       document.getElementById('gal-legenda').value = '';
+      if(document.getElementById('gal-ano')) document.getElementById('gal-ano').value = '';
       renderizarGaleriaPainel();
     }
 
@@ -1815,8 +1835,9 @@
       vazia.classList.add('hidden');
       lista.innerHTML = galeria.map(foto => {
         const preview = foto.url_foto;
+        const anoHtml = foto.ano ? `<span class="font-bold mr-1">${foto.ano}</span>` : '';
         const legTxt = foto.legenda
-          ? `<p class="text-sm text-vinho font-medium truncate mt-0.5">${foto.legenda}</p>`
+          ? `<p class="text-sm text-vinho font-medium truncate mt-0.5">${anoHtml}${foto.legenda}</p>`
           : `<p class="text-xs text-vinho/30 italic mt-0.5">Sem legenda</p>`;
         return `
           <div class="bg-white border border-rosa2/40 rounded-sm p-4 flex items-center gap-4 group">
@@ -1944,11 +1965,10 @@
     /* ── CHECKLIST: helpers Supabase ────────────────── */
     async function db_carregarChecklist() {
       try {
-        var resp = await _supabase.from('checklist').select('*').order('id', { ascending: true });
-        if (resp.error) throw resp.error;
-        if (resp.data && resp.data.length > 0) {
+        var data = await apiGet('checklist');
+        if (data && data.length > 0) {
           const gruposMap = {}, grupoOrder = [];
-          for (const row of resp.data) {
+          for (const row of data) {
             const g = row.grupo || 'Geral';
             if (!gruposMap[g]) { gruposMap[g] = { grupo: g, tarefas: [] }; grupoOrder.push(g); }
             gruposMap[g].tarefas.push({ id: row.id, texto: row.tarefa, feita: !!row.concluido });
@@ -1988,15 +2008,13 @@
       if (clResult === false) { await db_seedChecklist(); }
 
       // Financeiro: carrega do Supabase, fallback para localStorage
-      try {
-        var respFin = await _supabase.from('financeiro').select('*');
-        if (respFin.error) throw respFin.error;
-        orcamento = respFin.data || [];
-        salvar('orcamento', orcamento);
-      } catch(e) {
-        console.warn('[Supabase] financeiro falhou, usando cache:', e);
+      const finData = await apiGet('financeiro');
+      if (finData && finData.length > 0) {
+        orcamento = finData;
+      } else {
         orcamento = carregar('orcamento', orcamentoPadrao);
       }
+      salvar('orcamento', orcamento);
 
       const dadosCatalogo = await db_lerCatalogo();
       catalogo = dadosCatalogo !== null ? dadosCatalogo : catalogoPadrao.slice();
@@ -2037,7 +2055,8 @@
       }
       document.getElementById('cfg-noivo').value = cfg.noivo || '';
       document.getElementById('cfg-noiva').value = cfg.noiva || '';
-      document.getElementById('cfg-iniciais').value = cfg.iniciais || '';
+      if (document.getElementById('cfg-pix')) document.getElementById('cfg-pix').value = cfg.pix_chave || '';
+      if (document.getElementById('cfg-meta')) document.getElementById('cfg-meta').value = cfg.meta_arrecadacao || '';
       document.getElementById('cfg-data').value = cfg.data || '';
       document.getElementById('cfg-senha').value = cfg.senha_convidados || '';
       document.getElementById('cfg-senha-noivos').value = cfg.senha_noivos || '';
@@ -2051,12 +2070,13 @@
       var cfg = {
         noivo: document.getElementById('cfg-noivo').value.trim() || 'Elyabe',
         noiva: document.getElementById('cfg-noiva').value.trim() || 'Raianny',
-        iniciais: document.getElementById('cfg-iniciais').value.trim() || 'E & R',
         data: document.getElementById('cfg-data').value || '2027-09-18',
         senha_convidados: document.getElementById('cfg-senha').value.trim() || 'Casamento2026',
         senha_noivos: document.getElementById('cfg-senha-noivos').value.trim() || 'noivos2027',
         cor_marsala: document.getElementById('cfg-cor-marsala').value,
         cor_rosa: document.getElementById('cfg-cor-rosa').value,
+        pix_chave: document.getElementById('cfg-pix') ? document.getElementById('cfg-pix').value.trim() : '',
+        meta_arrecadacao: (document.getElementById('cfg-meta') && document.getElementById('cfg-meta').value) ? parseFloat(document.getElementById('cfg-meta').value) : null
       };
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
@@ -2079,12 +2099,13 @@
       var cfgLimpo = {
         noivo: cfgLocal.noivo || 'Elyabe',
         noiva: cfgLocal.noiva || 'Raianny',
-        iniciais: cfgLocal.iniciais || 'E & R',
         data: cfgLocal.data || '2027-09-18',
         senha_convidados: cfgLocal.senha_convidados || 'Casamento2026',
         senha_noivos: cfgLocal.senha_noivos || 'noivos2027',
         cor_marsala: COR_MARSALA_PADRAO,
         cor_rosa: COR_ROSA_PADRAO,
+        pix_chave: cfgLocal.pix_chave || '',
+        meta_arrecadacao: cfgLocal.meta_arrecadacao || null
       };
 
       btn.disabled = true;

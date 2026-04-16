@@ -682,30 +682,45 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    /* ── apiGet ──────────────────────────────────── */
+    // Função Universal para buscar dados (GET)
     async function apiGet(tabela) {
-      const { data, error } = await _supabase.from(tabela.toLowerCase()).select('*').order('id', { ascending: true });
-      if (error) { console.error('Erro no GET:', error); return []; }
-      return data;
+        const { data, error } = await _supabase
+            .from(tabela.toLowerCase())
+            .select('*')
+            .order('id', { ascending: true });
+        
+        if (error) {
+            console.error(`Erro ao buscar ${tabela}:`, error.message);
+            return [];
+        }
+        return data;
     }
 
-    /* ── apiPost ─────────────────────────────────── */
+    // Função Universal para salvar dados (POST/UPSERT)
     async function apiPost(tabela, dados, localKey, modo) {
-      const tabelaMin = tabela.toLowerCase();
-      try {
-        if (modo === 'append') {
-          const { error } = await _supabase.from(tabelaMin).insert([dados]);
-          if (error) throw error;
-        } else {
-          // Para tabelas de linha única como configuracoes e historia (ID 1)
-          const { error } = await _supabase.from(tabelaMin).upsert({ id: 1, ...dados });
-          if (error) throw error;
+        const tabelaMin = tabela.toLowerCase();
+        
+        // Limpeza de dados: Remove campos que não existem no banco (evita erro 400)
+        const { aba, modo: m, ...dadosLimpos } = dados;
+
+        try {
+            if (modo === 'append') {
+                // Para RSVP, Financeiro, Checklist e Recebidos
+                const { error } = await _supabase.from(tabelaMin).insert([dadosLimpos]);
+                if (error) throw error;
+            } else {
+                // Para Configurações e História (Usa o ID como âncora)
+                // Garante que o ID seja um número para não dar erro de tipo
+                if (dadosLimpos.id) dadosLimpos.id = parseInt(dadosLimpos.id);
+                
+                const { error } = await _supabase.from(tabelaMin).upsert(dadosLimpos);
+                if (error) throw error;
+            }
+            return true;
+        } catch (err) {
+            console.error(`Erro ao salvar em ${tabelaMin}:`, err.message);
+            return false;
         }
-        return true;
-      } catch (err) {
-        console.error('Erro no POST:', err.message);
-        return false;
-      }
     }
   </script>
 
@@ -921,8 +936,8 @@
             <!-- PIX -->
             <div class="flex items-center justify-between gap-2">
               <div>
-                <p class="text-xs text-vinho/50 uppercase tracking-wide">Chave PIX (CPF)</p>
-                <p id="mr-pix-chave" class="font-mono text-sm font-medium text-vinho mt-0.5">054.613.985-02</p>
+                <p class="text-xs text-vinho/50 uppercase tracking-wide">Chave PIX</p>
+                <p id="mr-pix-chave" class="font-mono text-sm font-medium text-vinho mt-0.5"></p>
               </div>
               <button onclick="copiarPix()" class="shrink-0 px-3 py-1.5 border border-marsala text-marsala text-xs tracking-wide uppercase
                              rounded-sm hover:bg-marsala hover:text-offwhite transition-all">
@@ -1103,6 +1118,11 @@
       document.getElementById('mr-pix').classList.add('hidden');
       document.getElementById('mr-reservado').classList.toggle('hidden', !reservado);
 
+      var cfg = {};
+      try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
+      const pix = cfg.pix_chave || '054.613.985-02';
+      document.getElementById('mr-pix-chave').textContent = pix;
+
       // Limpa form
       document.getElementById('mr-reservante').value = '';
       document.getElementById('mr-whats').value = '';
@@ -1194,7 +1214,10 @@
 
     // ── COPIAR PIX ─────────────────────────────────────
     function copiarPix() {
-      navigator.clipboard.writeText('054.613.985-02').then(() => {
+      var cfg = {};
+      try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
+      const pix = cfg.pix_chave || '054.613.985-02';
+      navigator.clipboard.writeText(pix).then(() => {
         const btn = document.querySelector('[onclick="copiarPix()"]');
         if (!btn) return;
         btn.textContent = 'Copiado!';
@@ -1280,6 +1303,8 @@
         const legenda = foto.legenda
           ? foto.legenda.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
           : '';
+        const anoHtml = foto.ano ? `<span class="font-bold mr-1">${foto.ano}</span>` : '';
+        const legendaCompleta = (anoHtml + legenda).trim();
         return `
           <div class="galeria-masonry-item">
             <div class="gal-img-wrap">
@@ -1290,7 +1315,7 @@
                    onload="this.classList.add('gal-ok')"
                    onerror="this.src='https://placehold.co/400x600/F5D0D8/8E3B46?text=Foto+em+Processo';this.classList.add('gal-ok')" />
             </div>
-            ${legenda ? `<div class="gal-legenda">${legenda}</div>` : ''}
+            ${legendaCompleta ? `<div class="gal-legenda">${legendaCompleta}</div>` : ''}
           </div>`;
       }).join('');
     }
@@ -1319,7 +1344,7 @@
     function aplicarIdentidade(cfg) {
       var noivo = cfg.noivo || 'Elyabe';
       var noiva = cfg.noiva || 'Raianny';
-      var iniciais = cfg.iniciais || 'E & R';
+      var iniciais = (noivo.charAt(0) + ' & ' + noiva.charAt(0)).toUpperCase();
       var data = cfg.data || '2027-09-18';
       function set(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
       document.title = noivo + ' & ' + noiva + ' — ' + fmtTitulo(data);
@@ -1343,9 +1368,9 @@
 
       // Depois sincroniza com Supabase e reaaplica se houver atualização
       try {
-        var resp = await _supabase.from('configuracoes').select('*').order('id', { ascending: true }).limit(1);
-        if (!resp.error && resp.data && resp.data.length > 0) {
-          var cfgRemota = resp.data[0];
+        var data = await apiGet('configuracoes');
+        if (data && data.length > 0) {
+          var cfgRemota = data[0];
           localStorage.setItem('configuracoes_site', JSON.stringify(cfgRemota));
           aplicarIdentidade(cfgRemota);
           // Reaaplica cores se mudaram
