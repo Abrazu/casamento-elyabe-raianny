@@ -748,13 +748,25 @@
       document.getElementById('rsvp-num-acomp').textContent = numAcomp;
       const container = document.getElementById('rsvp-campos-acomp');
       container.innerHTML = Array.from({ length: numAcomp }, (_, i) => `
-        <div>
+        <div class="mb-3">
           <label class="block text-xs tracking-widest uppercase text-vinho/50 mb-1">
             Acompanhante ${i + 1}
           </label>
-          <input type="text" id="acomp-${i}" placeholder="Nome completo"
-                 class="w-full border border-rosa2 bg-offwhite px-4 py-2 text-sm text-vinho placeholder:text-vinho/30
-                        focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+          <div class="flex gap-2">
+            <input type="text" id="acomp-${i}" placeholder="Nome completo"
+                   class="flex-1 border border-rosa2 bg-offwhite px-4 py-2 text-sm text-vinho placeholder:text-vinho/30
+                          focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+            <select id="acomp-tag-${i}" class="w-1/3 border border-rosa2 bg-offwhite px-2 py-2 text-xs text-vinho
+                          focus:outline-none focus:border-marsala transition-colors rounded-sm bg-transparent appearance-none">
+              <option value="" disabled selected>Vínculo...</option>
+              <option value="Esposa">Esposa</option>
+              <option value="Marido">Marido</option>
+              <option value="Filho(a)">Filho(a)</option>
+              <option value="Pai/Mãe">Pai/Mãe</option>
+              <option value="Namorado(a)">Namorado(a)</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
         </div>
       `).join('');
     }
@@ -762,13 +774,21 @@
     async function enviarRSVP(e) {
       e.preventDefault();
       const nome = document.getElementById('rsvp-nome').value.trim();
-      const whats = document.getElementById('rsvp-whats').value.trim();
+      const whatsRaw = document.getElementById('rsvp-whats').value.trim();
+      const whats = whatsRaw.replace(/\D/g, '');
       const status = document.getElementById('rsvp-status').value;
 
       const acompanhantes = [];
       for (let i = 0; i < numAcomp; i++) {
         const v = document.getElementById('acomp-' + i)?.value.trim();
-        if (v) acompanhantes.push(v);
+        const tag = document.getElementById('acomp-tag-' + i)?.value;
+        if (v) {
+          if (tag) {
+            acompanhantes.push(`${v} (${tag})`);
+          } else {
+            acompanhantes.push(v);
+          }
+        }
       }
 
       const envio = {
@@ -1193,7 +1213,8 @@
     async function confirmarReserva() {
       if (!itemAtual) return;
       const nome = document.getElementById('mr-reservante').value.trim();
-      const whats = document.getElementById('mr-whats').value.trim();
+      const whatsRaw = document.getElementById('mr-whats').value.trim();
+      const whats = whatsRaw.replace(/\D/g, '');
       if (!nome) return;
 
       const btn = document.getElementById('mr-hold-btn');
@@ -1415,6 +1436,23 @@
       if (texto && texto.trim()) {
         document.getElementById('historia-texto-dinamico').textContent = texto.trim();
       }
+    });
+  </script>
+
+  <!-- MÁSCARA WHATSAPP -->
+  <script>
+    function mascaraWhatsApp(e) {
+      let v = e.target.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+      v = v.replace(/(\d{5})(\d)/, '$1-$2');
+      e.target.value = v;
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const inputs = document.querySelectorAll('input[type="tel"], #rsvp-whats, #mr-whats');
+      inputs.forEach(input => {
+        if (input) input.addEventListener('input', mascaraWhatsApp);
+      });
     });
   </script>
 

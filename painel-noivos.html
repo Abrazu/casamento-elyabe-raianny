@@ -1072,7 +1072,8 @@
 
     function salvarConvidado() {
       const nome = document.getElementById('novo-nome').value.trim();
-      const whats = document.getElementById('novo-whats').value.trim();
+      const whatsRaw = document.getElementById('novo-whats').value.trim();
+      const whats = whatsRaw.replace(/\D/g, '');
       const acomp = document.getElementById('novo-acomp').value.trim();
       const status = document.getElementById('novo-status').value;
       if (!nome) return alert('Informe o nome.');
@@ -2158,6 +2159,23 @@
     if (sessionStorage.getItem('autenticado') === '1') {
       document.addEventListener('DOMContentLoaded', inicializar);
     }
+  </script>
+
+  <!-- MÁSCARA WHATSAPP -->
+  <script>
+    function mascaraWhatsApp(e) {
+      let v = e.target.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+      v = v.replace(/(\d{5})(\d)/, '$1-$2');
+      e.target.value = v;
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const inputs = document.querySelectorAll('input[type="tel"], #novo-whats');
+      inputs.forEach(input => {
+        if (input) input.addEventListener('input', mascaraWhatsApp);
+      });
+    });
   </script>
 
 </body>
