@@ -896,6 +896,8 @@
       const val = document.getElementById('input-senha').value;
       if (val === SENHA_CORRETA) {
         sessionStorage.setItem('autenticado', '1');
+        localStorage.setItem('logado', 'true');
+        localStorage.setItem('admin_logado', 'true');
         document.getElementById('modal-senha').style.display = 'none';
         document.getElementById('painel').style.display = 'block';
         inicializar();

@@ -4,7 +4,9 @@
 <head>
   <script>
     (function() {
-      if (localStorage.getItem('logado') !== 'true') {
+      const isGuest = localStorage.getItem('logado') === 'true';
+      const isAdmin = localStorage.getItem('admin_logado') === 'true';
+      if (!isGuest && !isAdmin) {
         window.location.replace('index.html');
       }
     })();
