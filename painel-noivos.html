@@ -1571,10 +1571,8 @@
       tbody.innerHTML = catalogo.map(item => {
         const reservado = !!item.reservadoPor;
         const imgHtml = item.imagem
-          ? `<img src="${item.imagem}" alt="${item.nome}"
-                  onerror="this.outerHTML='<div class=\\"w-12 h-12 bg-rosa/30 rounded-sm flex items-center justify-center text-xl\\">🎁</div>'"
-                  class="w-12 h-12 object-cover rounded-sm bg-rosa/20" />`
-          : `<div class="w-12 h-12 bg-rosa/30 rounded-sm flex items-center justify-center text-xl">🎁</div>`;
+          ? `<img src="${item.imagem}" class="w-12 h-12 object-cover rounded-sm bg-rosa/20" alt="Presente" />`
+          : `<div class="w-12 h-12 flex items-center justify-center bg-rosa/20 rounded-sm text-2xl">🎁</div>`;
 
         return `<tr class="hover:bg-rosa/10 transition-colors">
           <td class="px-4 py-3">${imgHtml}</td>
