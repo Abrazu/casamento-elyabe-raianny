@@ -2,6 +2,13 @@
 <html lang="pt-BR">
 
 <head>
+  <script>
+    (function() {
+      if (localStorage.getItem('logado') === 'true' || localStorage.getItem('acesso_convidado') === 'true') {
+        window.location.replace('home.html');
+      }
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Acesso Restrito - Elyabe & Raianny</title>
