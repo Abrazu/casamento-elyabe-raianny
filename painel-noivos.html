@@ -1877,13 +1877,17 @@
 
     /* ── INBOX DE RSVP (vindos do site) ─────────────────── */
     async function carregarInbox() {
-      const pendentes = await apiGet('rsvp');
+      let todos = await apiGet('rsvp');
+      if (!Array.isArray(todos)) todos = [];
+      // Filtra os que já foram aceitos (minúsculo) ou recusados, pois novos vêm como 'Confirmado' ou 'Recusado'
+      const pendentes = todos.filter(r => r.status !== 'confirmado' && r.status !== 'recusado');
+
       const badge = document.getElementById('badge-rsvp');
       const inbox = document.getElementById('rsvp-inbox');
       const lista = document.getElementById('rsvp-inbox-lista');
       const count = document.getElementById('rsvp-inbox-count');
 
-      if (!Array.isArray(pendentes) || pendentes.length === 0) {
+      if (pendentes.length === 0) {
         inbox.classList.add('hidden');
         badge.classList.add('hidden');
         return;
@@ -1894,7 +1898,7 @@
       count.textContent = pendentes.length;
       inbox.classList.remove('hidden');
 
-      lista.innerHTML = pendentes.map((r, i) => {
+      lista.innerHTML = pendentes.map((r) => {
         const acompArr = (r.acompanhantes || '').split(', ').filter(Boolean);
         const acompTxt = acompArr.length ? acompArr.join(', ') : 'Nenhum';
         const badgeCls = r.status === 'Confirmado' ? 'badge-confirmado' : 'badge-recusado';
@@ -1913,11 +1917,11 @@
               <span class="text-xs text-vinho/30">${r.data_envio || ''}</span>
             </div>
             <div class="flex gap-2 shrink-0">
-              <button onclick="importarRSVP(${i})"
+              <button onclick="importarRSVP(${r.id})"
                       class="px-3 py-1.5 bg-marsala text-offwhite text-xs tracking-wide uppercase rounded-sm hover:bg-marsala2 transition-colors">
                 Adicionar à lista
               </button>
-              <button onclick="dispensarRSVP(${i})"
+              <button onclick="dispensarRSVP(${r.id})"
                       class="px-3 py-1.5 border border-rosa2 text-vinho/50 text-xs tracking-wide uppercase rounded-sm hover:border-marsala hover:text-marsala transition-colors">
                 Ignorar
               </button>
@@ -1926,11 +1930,12 @@
       }).join('');
     }
 
-    async function importarRSVP(i) {
-      const pendentes = await apiGet('rsvp');
-      const r = pendentes[i];
+    async function importarRSVP(id) {
+      const todos = await apiGet('rsvp');
+      const r = todos.find(item => item.id === id);
+      if (!r) return;
 
-      // Adiciona o convidado principal
+      // Adiciona o convidado principal na lista local do painel
       convidados.push({ nome: r.nome, whats: r.whatsapp || '', acomp: r.acompanhantes || '', status: r.status });
 
       // Adiciona cada acompanhante como convidado separado
@@ -1940,27 +1945,41 @@
 
       salvar('convidados', convidados);
 
-      // Remove do Supabase
+      // Em vez de deletar, fazemos o UPDATE no banco para persistir
       if (r.id) {
-        try { await _supabase.from('rsvp').delete().eq('id', r.id); } catch(e) { console.warn(e); }
+        try { 
+          const { error } = await _supabase.from('rsvp').update({ status: 'confirmado' }).eq('id', parseInt(r.id));
+          if (error) console.error(error);
+        } catch(e) { console.warn(e); }
       }
 
       renderizarConvidados();
-      carregarInbox();
+      carregarInbox(); // Atualiza a lista visualmente, buscando dados reais
     }
 
-    async function dispensarRSVP(i) {
-      const pendentes = await apiGet('rsvp');
-      const r = pendentes[i];
-      if (r && r.id) {
-        try { await _supabase.from('rsvp').delete().eq('id', r.id); } catch(e) { console.warn(e); }
+    async function dispensarRSVP(id) {
+      if (id) {
+        // A lógica de recusa deleta a linha (como antes)
+        try { 
+          const { error } = await _supabase.from('rsvp').delete().eq('id', parseInt(id));
+          if (error) console.error(error);
+        } catch(e) { console.warn(e); }
       }
       carregarInbox();
     }
 
     async function dispensarTodas() {
       if (confirm('Dispensar todas as confirmações pendentes sem adicionar à lista?')) {
-        try { await _supabase.from('rsvp').delete().gte('id', 0); } catch(e) { console.warn(e); }
+        let todos = await apiGet('rsvp');
+        if (!Array.isArray(todos)) todos = [];
+        const pendentes = todos.filter(r => r.status !== 'confirmado' && r.status !== 'recusado');
+        const ids = pendentes.map(r => parseInt(r.id));
+        
+        if (ids.length > 0) {
+          try { 
+            await _supabase.from('rsvp').delete().in('id', ids); 
+          } catch(e) { console.warn(e); }
+        }
         carregarInbox();
       }
     }
