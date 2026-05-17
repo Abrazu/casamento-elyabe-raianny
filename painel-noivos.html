@@ -761,7 +761,8 @@
         class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
       <input id="orc-valor-pago" type="number" placeholder="Valor já pago (R$)"
         class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
-      <select id="orc-status" class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm">
+      <select id="orc-status"
+        class="border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm">
         <option value="Pendente">Pendente</option>
         <option value="Parcial">Parcial</option>
         <option value="Pago">Pago</option>
@@ -849,43 +850,43 @@
 
     // Função Universal para buscar dados (GET)
     async function apiGet(tabela) {
-        const { data, error } = await _supabase
-            .from(tabela.toLowerCase())
-            .select('*')
-            .order('id', { ascending: true });
-        
-        if (error) {
-            console.error(`Erro ao buscar ${tabela}:`, error.message);
-            return [];
-        }
-        return data;
+      const { data, error } = await _supabase
+        .from(tabela.toLowerCase())
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (error) {
+        console.error(`Erro ao buscar ${tabela}:`, error.message);
+        return [];
+      }
+      return data;
     }
 
     // Função Universal para salvar dados (POST/UPSERT)
     async function apiPost(tabela, dados, localKey, modo) {
-        const tabelaMin = tabela.toLowerCase();
-        
-        // Limpeza de dados: Remove campos que não existem no banco (evita erro 400)
-        const { aba, modo: m, ...dadosLimpos } = dados;
+      const tabelaMin = tabela.toLowerCase();
 
-        try {
-            if (modo === 'append') {
-                // Para RSVP, Financeiro, Checklist e Recebidos
-                const { error } = await _supabase.from(tabelaMin).insert([dadosLimpos]);
-                if (error) throw error;
-            } else {
-                // Para Configurações e História (Usa o ID como âncora)
-                // Garante que o ID seja um número para não dar erro de tipo
-                if (dadosLimpos.id) dadosLimpos.id = parseInt(dadosLimpos.id);
-                
-                const { error } = await _supabase.from(tabelaMin).upsert(dadosLimpos);
-                if (error) throw error;
-            }
-            return true;
-        } catch (err) {
-            console.error(`Erro ao salvar em ${tabelaMin}:`, err.message);
-            return false;
+      // Limpeza de dados: Remove campos que não existem no banco (evita erro 400)
+      const { aba, modo: m, ...dadosLimpos } = dados;
+
+      try {
+        if (modo === 'append') {
+          // Para RSVP, Financeiro, Checklist e Recebidos
+          const { error } = await _supabase.from(tabelaMin).insert([dadosLimpos]);
+          if (error) throw error;
+        } else {
+          // Para Configurações e História (Usa o ID como âncora)
+          // Garante que o ID seja um número para não dar erro de tipo
+          if (dadosLimpos.id) dadosLimpos.id = parseInt(dadosLimpos.id);
+
+          const { error } = await _supabase.from(tabelaMin).upsert(dadosLimpos);
+          if (error) throw error;
         }
+        return true;
+      } catch (err) {
+        console.error(`Erro ao salvar em ${tabelaMin}:`, err.message);
+        return false;
+      }
     }
 
     /* ── SENHA ─────────────────────────────────────────── */
@@ -1220,7 +1221,7 @@
       salvar('checklist', checklist);
       document.getElementById('cl-t-' + gi + '-' + ti).outerHTML = tarefaView(gi, ti);
       if (t.id) {
-        try { await _supabase.from('checklist').update({ tarefa: texto }).eq('id', t.id); } catch(e) { console.warn(e); }
+        try { await _supabase.from('checklist').update({ tarefa: texto }).eq('id', t.id); } catch (e) { console.warn(e); }
       }
     }
     function cancelarEdicaoTarefa(gi, ti) {
@@ -1240,10 +1241,10 @@
       const texto = document.getElementById('cl-nova-' + gi).value.trim();
       if (!texto) return;
       const grupoNome = checklist[gi].grupo;
-      
+
       await apiPost('checklist', { grupo: grupoNome, tarefa: texto, concluido: false }, null, 'append');
       await db_carregarChecklist();
-      
+
       renderizarChecklist();
       mostrarAddTarefa(gi);
     }
@@ -1255,7 +1256,7 @@
       salvar('checklist', checklist);
       renderizarChecklist();
       if (t.id) {
-        try { await _supabase.from('checklist').delete().eq('id', t.id); } catch(e) { console.warn(e); }
+        try { await _supabase.from('checklist').delete().eq('id', t.id); } catch (e) { console.warn(e); }
       }
     }
 
@@ -1284,7 +1285,7 @@
       salvar('checklist', checklist);
       renderizarChecklist();
       if (oldNome !== nome) {
-        try { await _supabase.from('checklist').update({ grupo: nome }).eq('grupo', oldNome); } catch(e) { console.warn(e); }
+        try { await _supabase.from('checklist').update({ grupo: nome }).eq('grupo', oldNome); } catch (e) { console.warn(e); }
       }
     }
     function cancelarEdicaoGrupo(gi) { renderizarChecklist(); }
@@ -1316,7 +1317,7 @@
       checklist.splice(gi, 1);
       salvar('checklist', checklist);
       renderizarChecklist();
-      try { await _supabase.from('checklist').delete().eq('grupo', grupoNome); } catch(e) { console.warn(e); }
+      try { await _supabase.from('checklist').delete().eq('grupo', grupoNome); } catch (e) { console.warn(e); }
     }
 
     function atualizarProgresso() {
@@ -1371,8 +1372,8 @@
       const saldo = (item.valor_total || 0) - (item.valor_pago || 0);
       const saldoCls = saldo > 0 ? 'text-marsala' : 'text-green-700';
       const inputCls = 'w-full border border-rosa2 bg-white px-2 py-1 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm transition-colors';
-      const statusOpts = ['Pendente','Parcial','Pago'].map(s =>
-        `<option value="${s}" ${(item.status_pagamento||'Pendente')===s?'selected':''}>${s}</option>`).join('');
+      const statusOpts = ['Pendente', 'Parcial', 'Pago'].map(s =>
+        `<option value="${s}" ${(item.status_pagamento || 'Pendente') === s ? 'selected' : ''}>${s}</option>`).join('');
       return `<tr id="orc-row-${i}" class="bg-rosa/25 ring-1 ring-inset ring-marsala/20">
         <td class="px-3 py-2">
           <input id="ei-forn-${i}" value="${item.fornecedor}" class="${inputCls}" placeholder="Fornecedor" />
@@ -1381,11 +1382,11 @@
           <input id="ei-cat-${i}" value="${item.categoria}" class="${inputCls}" placeholder="Categoria" />
         </td>
         <td class="px-3 py-2">
-          <input id="ei-vtotal-${i}" value="${item.valor_total||0}" type="number" min="0" step="0.01"
+          <input id="ei-vtotal-${i}" value="${item.valor_total || 0}" type="number" min="0" step="0.01"
                  oninput="previewSaldo(${i})" class="${inputCls} text-right" />
         </td>
         <td class="px-3 py-2">
-          <input id="ei-vpago-${i}" value="${item.valor_pago||0}" type="number" min="0" step="0.01"
+          <input id="ei-vpago-${i}" value="${item.valor_pago || 0}" type="number" min="0" step="0.01"
                  oninput="previewSaldo(${i})" class="${inputCls} text-right" />
         </td>
         <td id="ei-saldo-${i}" class="px-4 py-3 text-right font-medium ${saldoCls}">${fmtBRL(saldo)}</td>
@@ -1393,7 +1394,7 @@
           <select id="ei-status-${i}" class="${inputCls}">${statusOpts}</select>
         </td>
         <td class="px-3 py-2">
-          <input id="ei-venc-${i}" value="${item.vencimento||''}" type="date" class="${inputCls}" />
+          <input id="ei-venc-${i}" value="${item.vencimento || ''}" type="date" class="${inputCls}" />
         </td>
         <td class="px-3 py-2">
           <div class="flex items-center gap-2">
@@ -1439,7 +1440,7 @@
       if (oldId) {
         try {
           await _supabase.from('financeiro').update({ fornecedor, categoria, valor_total, valor_pago, status_pagamento, vencimento }).eq('id', oldId);
-        } catch(e) { console.warn(e); }
+        } catch (e) { console.warn(e); }
       }
       document.getElementById('orc-row-' + i).outerHTML = linhaOrcamentoView(i);
       atualizarTotaisOrcamento();
@@ -1482,13 +1483,13 @@
       const status_pagamento = document.getElementById('orc-status').value || 'Pendente';
       const vencimento = document.getElementById('orc-vencimento').value || '';
       if (!fornecedor) return alert('Informe o fornecedor.');
-      
+
       var novo = { fornecedor, categoria, valor_total, valor_pago, status_pagamento, vencimento };
       await apiPost('financeiro', novo, null, 'append');
-      
+
       orcamento = await apiGet('financeiro');
       salvar('orcamento', orcamento);
-      
+
       fecharModal('modal-orcamento');
       ['orc-fornecedor', 'orc-categoria', 'orc-valor-total', 'orc-valor-pago', 'orc-vencimento'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('orc-status').value = 'Pendente';
@@ -1499,7 +1500,7 @@
       if (confirm('Remover ' + orcamento[i].fornecedor + '?')) {
         var item = orcamento[i];
         if (item.id) {
-          try { await _supabase.from('financeiro').delete().eq('id', item.id); } catch(e) { console.warn(e); }
+          try { await _supabase.from('financeiro').delete().eq('id', item.id); } catch (e) { console.warn(e); }
         }
         orcamento.splice(i, 1);
         salvar('orcamento', orcamento);
@@ -1568,44 +1569,32 @@
         return;
       }
 
+      // Substitua o conteúdo dentro da função por este:
       tbody.innerHTML = catalogo.map(item => {
-        const reservado = !!item.reservadoPor;
-        const imgHtml = item.imagem
-          ? `<img src="${item.imagem}" class="w-12 h-12 object-cover rounded-sm bg-rosa/20" alt="Presente" />`
-          : `<div class="w-12 h-12 flex items-center justify-center bg-rosa/20 rounded-sm text-2xl">🎁</div>`;
+        // Verifica se o campo da imagem existe (ajuste para 'url_imagem' se necessário)
+        const fotoUrl = item.url_imagem || item.imagem;
 
-        return `<tr class="hover:bg-rosa/10 transition-colors">
-          <td class="px-4 py-3">${imgHtml}</td>
-          <td class="px-4 py-3 max-w-xs">
-            <p class="font-medium text-sm text-vinho">${item.nome}</p>
-            <p class="text-xs text-vinho/50 mt-0.5 line-clamp-2">${item.descricao || '—'}</p>
-          </td>
-          <td class="px-4 py-3 text-center">
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" class="sr-only peer" ${item.ativo ? 'checked' : ''} onchange="toggleAtivo(${item.id})">
-              <div class="w-9 h-5 bg-rosa2 peer-checked:bg-marsala rounded-full transition-colors duration-200 relative
-                          after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
-                          after:h-4 after:w-4 after:transition-all after:duration-200 peer-checked:after:translate-x-4"></div>
-            </label>
-          </td>
-          <td class="px-4 py-3">
-            <span class="px-2 py-0.5 text-xs rounded-full font-medium ${reservado ? 'badge-escolhido' : 'badge-disponivel'}">
-              ${reservado ? 'Reservado' : 'Disponível'}
-            </span>
-          </td>
-          <td class="px-4 py-3">
-            <div class="flex items-center gap-3">
-              <button onclick="abrirModalItem(${item.id})"
-                      class="flex items-center gap-1 text-xs text-vinho/40 hover:text-marsala transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.415.586H9v-2a2 2 0 01.586-1.414z"/>
-                </svg>Editar
-              </button>
-              <button onclick="removerItem(${item.id})" class="text-xs text-vinho/30 hover:text-red-500 transition-colors">Excluir</button>
-            </div>
-          </td>
-        </tr>`;
-      }).join('');
+        const imgHtml = fotoUrl
+          ? `<img src="${fotoUrl}" class="w-12 h-12 object-cover rounded-sm bg-white border border-rosa/20" alt="Presente" />`
+          : `<div class="w-12 h-12 flex items-center justify-center bg-white border border-rosa/20 rounded-sm text-2xl">🎁</div>`;
+
+        return `
+    <tr class="hover:bg-rosa/10 transition-colors border-b border-rosa/5">
+      <td class="px-4 py-3">${imgHtml}</td>
+      <td class="px-4 py-3 font-medium">${item.nome}</td>
+      <td class="px-4 py-3 text-rosa">R$ ${parseFloat(item.valor).toFixed(2)}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-1 rounded-full text-xs ${item.reservadoPor ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
+          ${item.reservadoPor ? 'Reservado' : 'Disponível'}
+        </span>
+      </td>
+      <td class="px-4 py-3 text-right">
+        <button onclick="editarPresente(${item.id})" class="text-blue-500 hover:text-blue-700 mr-2">
+          <i class="fas fa-edit"></i>
+        </td>
+    </tr>
+  `;
+      }).join(''); // O .join('') é essencial para não aparecer vírgulas na tabela!
     }
 
     function renderizarRecebidos() {
@@ -1673,7 +1662,7 @@
           if (resp.error) throw resp.error;
           const newId = resp.data && resp.data[0] ? resp.data[0].id : Date.now();
           catalogo.push({ id: newId, nome, imagem, descricao, ativo, reservadoPor: null });
-        } catch(e) {
+        } catch (e) {
           console.warn('[Supabase] insert presente falhou:', e);
           catalogo.push({ id: Date.now(), nome, imagem, descricao, ativo, reservadoPor: null });
         }
@@ -1703,7 +1692,7 @@
         ? `"${item.nome}" já está reservado. Remover mesmo assim?`
         : `Remover "${item.nome}"?`;
       if (!confirm(msg)) return;
-      try { await _supabase.from('presentes').delete().eq('id', id); } catch(e) { console.warn(e); }
+      try { await _supabase.from('presentes').delete().eq('id', id); } catch (e) { console.warn(e); }
       catalogo = catalogo.filter(i => i.id !== id);
       renderizarGerItens();
       renderizarRecebidos();
@@ -1802,12 +1791,12 @@
         var resp = await _supabase.from('historia').insert(novo).select();
         if (resp.error) throw resp.error;
         if (resp.data && resp.data[0]) novo.id = resp.data[0].id;
-      } catch(e) { console.warn('[Supabase] insert historia foto falhou:', e); novo.id = Date.now(); }
+      } catch (e) { console.warn('[Supabase] insert historia foto falhou:', e); novo.id = Date.now(); }
       galeria.push(novo);
       salvar('galeria_fotos', galeria);
       input.value = '';
       document.getElementById('gal-legenda').value = '';
-      if(document.getElementById('gal-ano')) document.getElementById('gal-ano').value = '';
+      if (document.getElementById('gal-ano')) document.getElementById('gal-ano').value = '';
       renderizarGaleriaPainel();
     }
 
@@ -1816,7 +1805,7 @@
       const idx = galeria.findIndex(f => Number(f.id) === idNum);
       if (idx === -1) return;
       if (!confirm('Remover "' + (galeria[idx].legenda || 'esta foto') + '" da galeria?')) return;
-      try { await _supabase.from('historia').delete().eq('id', idNum); } catch(e) { console.warn(e); }
+      try { await _supabase.from('historia').delete().eq('id', idNum); } catch (e) { console.warn(e); }
       galeria.splice(idx, 1);
       salvar('galeria_fotos', galeria);
       renderizarGaleriaPainel();
@@ -1945,10 +1934,10 @@
 
       // Em vez de deletar, fazemos o UPDATE no banco para persistir
       if (r.id) {
-        try { 
+        try {
           const { error } = await _supabase.from('rsvp').update({ status: 'confirmado' }).eq('id', parseInt(r.id));
           if (error) console.error(error);
-        } catch(e) { console.warn(e); }
+        } catch (e) { console.warn(e); }
       }
 
       renderizarConvidados();
@@ -1958,10 +1947,10 @@
     async function dispensarRSVP(id) {
       if (id) {
         // A lógica de recusa deleta a linha (como antes)
-        try { 
+        try {
           const { error } = await _supabase.from('rsvp').delete().eq('id', parseInt(id));
           if (error) console.error(error);
-        } catch(e) { console.warn(e); }
+        } catch (e) { console.warn(e); }
       }
       carregarInbox();
     }
@@ -1972,11 +1961,11 @@
         if (!Array.isArray(todos)) todos = [];
         const pendentes = todos.filter(r => r.status !== 'confirmado' && r.status !== 'recusado');
         const ids = pendentes.map(r => parseInt(r.id));
-        
+
         if (ids.length > 0) {
-          try { 
-            await _supabase.from('rsvp').delete().in('id', ids); 
-          } catch(e) { console.warn(e); }
+          try {
+            await _supabase.from('rsvp').delete().in('id', ids);
+          } catch (e) { console.warn(e); }
         }
         carregarInbox();
       }
@@ -1998,7 +1987,7 @@
           return true;
         }
         return false;
-      } catch(e) {
+      } catch (e) {
         console.warn('[Supabase] checklist falhou, usando cache:', e);
         return null;
       }
@@ -2012,7 +2001,7 @@
               grupo: grupo.grupo, tarefa: tarefa.texto, concluido: tarefa.feita
             }).select();
             if (!resp.error && resp.data && resp.data[0]) tarefa.id = resp.data[0].id;
-          } catch(e) { console.warn('[Supabase] seed checklist:', e); }
+          } catch (e) { console.warn('[Supabase] seed checklist:', e); }
         }
       }
       salvar('checklist', checklist);
@@ -2044,9 +2033,9 @@
       try {
         var respHist = await _supabase.from('historia').select('*');
         if (respHist.error) throw respHist.error;
-        galeria = (respHist.data || []).filter(function(r) { return r && r.url_foto; });
+        galeria = (respHist.data || []).filter(function (r) { return r && r.url_foto; });
         salvar('galeria_fotos', galeria);
-      } catch(e) {
+      } catch (e) {
         console.warn('[Supabase] historia/galeria falhou, usando cache:', e);
         galeria = carregar('galeria_fotos', []);
       }
@@ -2147,7 +2136,7 @@
       var texto = '';
       if (Array.isArray(dados)) {
         // O texto "Nossa História" fica na legenda do id: 1 (row sem url_foto)
-        var row1 = dados.find(function(r) { return r && r.id === 1; });
+        var row1 = dados.find(function (r) { return r && r.id === 1; });
         if (row1) texto = row1.legenda || '';
       } else if (dados && typeof dados === 'object') {
         texto = dados.legenda || '';
@@ -2168,7 +2157,7 @@
           ano: ''
         });
         if (error) throw error;
-      } catch(e) { console.warn('[Supabase] upsert historia texto falhou:', e); }
+      } catch (e) { console.warn('[Supabase] upsert historia texto falhou:', e); }
       localStorage.setItem('texto_nossa_historia', JSON.stringify(texto));
       btn.textContent = 'Salvo ✓';
       setTimeout(() => { btn.textContent = 'Salvar Texto'; btn.disabled = false; }, 2000);
