@@ -159,6 +159,36 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+    var senhaCorreta = '';
+
+    async function carregarSenhaServidor() {
+      // Tenta usar a função RPC segura (não expõe a senha)
+      window._usarRPC = false;
+      try {
+        const { data, error } = await _supabase.rpc('validar_senha_convidados', { senha_tentativa: 'teste_rpc_existe' });
+        if (!error) {
+          window._usarRPC = true;
+          console.log('[Segurança] Validação via RPC ativa.');
+          return; // RPC existe, não precisa carregar senha
+        }
+      } catch(e) {}
+
+      // Fallback: carrega apenas a coluna necessária (sem SELECT *)
+      try {
+        var resp = await _supabase.from('configuracoes').select('senha_convidados').limit(1);
+        if (resp.data && resp.data.length > 0) {
+          senhaCorreta = resp.data[0].senha_convidados;
+        }
+      } catch(e) {
+        console.warn('[Supabase] Falha ao carregar senha:', e);
+      }
+    }
+
+    // Carrega senha ao iniciar
+    carregarSenhaServidor();
+
     async function apiGet(tabela) {
       const { data, error } = await _supabase.from(tabela.toLowerCase()).select('*').order('id', { ascending: true });
       if (error) { console.error('Erro no GET:', error.message); return []; }
@@ -181,17 +211,42 @@
 
       btn.disabled = true;
       spinner.style.display = 'inline-block';
-      
+
       try {
-        const dados = await apiGet('configuracoes');
-        let senhaCorreta = 'Casamento2026'; // Default fallback
-        if (dados && dados.length > 0) {
-          senhaCorreta = dados[0].senha_convidados || senhaCorreta;
-          // Salva objeto no LocalStorage para compartilhar Nomes e Cores com home.html sem flicker
-          localStorage.setItem('configuracoes_site', JSON.stringify(dados[0]));
+        // Carrega dados públicos de configurações (sem senha) para cache local
+        try {
+          var cfgResp = await _supabase.from('configuracoes').select('id,noivo,noiva,data,cor_marsala,cor_rosa,pix_chave,meta_arrecadacao').limit(1);
+          if (cfgResp.data && cfgResp.data.length > 0) {
+            // Salva objeto no LocalStorage para compartilhar Nomes e Cores com home.html sem flicker
+            localStorage.setItem('configuracoes_site', JSON.stringify(cfgResp.data[0]));
+          }
+        } catch(e) {}
+
+        var senhaValida = false;
+
+        if (window._usarRPC) {
+          // Validação segura via RPC
+          try {
+            const { data, error } = await _supabase.rpc('validar_senha_convidados', { senha_tentativa: pw });
+            if (error) throw error;
+            if (data === true) {
+              senhaValida = true;
+            }
+          } catch(e) {
+            console.warn('[RPC] Falha, tentando fallback:', e);
+            // Se RPC falhou, tenta comparação local como fallback
+            if (pw === senhaCorreta) {
+              senhaValida = true;
+            }
+          }
+        } else {
+          // Fallback: comparação local
+          if (pw === senhaCorreta) {
+            senhaValida = true;
+          }
         }
 
-        if (pw === senhaCorreta) {
+        if (senhaValida) {
           localStorage.setItem('logado', 'true');
           window.location.replace('home.html');
         } else {

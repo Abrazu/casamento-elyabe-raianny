@@ -847,6 +847,40 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // Sanitização anti-XSS
+    function esc(s) {
+      if (!s) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Cache com TTL para reduzir chamadas ao Supabase
+    async function fetchComCache(tabela, ttlSegundos) {
+      if (!ttlSegundos) ttlSegundos = 300;
+      var chave = 'cache_' + tabela;
+      var cache = sessionStorage.getItem(chave);
+      if (cache) {
+        try {
+          var parsed = JSON.parse(cache);
+          if (Date.now() < parsed.expira) {
+            return parsed.dados;
+          }
+        } catch(e) {}
+      }
+      var dados = await apiGet(tabela);
+      try {
+        sessionStorage.setItem(chave, JSON.stringify({ dados: dados, expira: Date.now() + (ttlSegundos * 1000) }));
+      } catch(e) {}
+      return dados;
+    }
+    function invalidarCache(tabela) {
+      sessionStorage.removeItem('cache_' + tabela);
+    }
+
     // Função Universal para buscar dados (GET)
     async function apiGet(tabela) {
         const { data, error } = await _supabase
@@ -892,7 +926,7 @@
     function verificarSenha() {
       var cfg = {};
       try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
-      const SENHA_CORRETA = cfg.senha_noivos || 'noivos2027';
+      const SENHA_CORRETA = cfg.senha_noivos || '';
       const val = document.getElementById('input-senha').value;
       if (val === SENHA_CORRETA) {
         sessionStorage.setItem('autenticado', '1');
@@ -900,6 +934,9 @@
         localStorage.setItem('admin_logado', 'true');
         document.getElementById('modal-senha').style.display = 'none';
         document.getElementById('painel').style.display = 'block';
+        // Inicia keep-alive ao fazer login
+        manterBancoAtivo();
+        setInterval(manterBancoAtivo, 10 * 60 * 1000);
         inicializar();
       } else {
         document.getElementById('erro-senha').classList.remove('hidden');
@@ -914,6 +951,8 @@
 
     function sair() {
       sessionStorage.removeItem('autenticado');
+      localStorage.removeItem('logado');
+      localStorage.removeItem('admin_logado');
       location.reload();
     }
 
@@ -986,25 +1025,8 @@
       },
     ];
 
-    const orcamentoPadrao = [
-      { fornecedor: 'Espaço Villa Rosa', categoria: 'Local', valor_total: 15000, valor_pago: 5000, status_pagamento: 'Parcial', vencimento: '' },
-      { fornecedor: 'Buffet Sabor & Arte', categoria: 'Alimentação', valor_total: 12000, valor_pago: 3000, status_pagamento: 'Parcial', vencimento: '' },
-      { fornecedor: 'Foto & Film Studio', categoria: 'Foto/Vídeo', valor_total: 8000, valor_pago: 2000, status_pagamento: 'Parcial', vencimento: '' },
-      { fornecedor: 'Atelier Noiva', categoria: 'Vestido', valor_total: 4500, valor_pago: 4500, status_pagamento: 'Pago', vencimento: '' },
-      { fornecedor: 'DJ Marco Hits', categoria: 'Música', valor_total: 3000, valor_pago: 0, status_pagamento: 'Pendente', vencimento: '' },
-      { fornecedor: 'Flores & Sonhos', categoria: 'Decoração', valor_total: 5500, valor_pago: 1500, status_pagamento: 'Parcial', vencimento: '' },
-    ];
-
-    const catalogoPadrao = [
-      { id: 1001, nome: 'Air Fryer 4L', imagem: '', descricao: 'Air fryer 4L, ideal para cozinhar com menos óleo e mais sabor.', ativo: true, reservadoPor: null },
-      { id: 1002, nome: 'Jogo de Panelas', imagem: '', descricao: 'Jogo com 5 panelas antiaderentes de diferentes tamanhos.', ativo: true, reservadoPor: null },
-      { id: 1003, nome: 'Liquidificador', imagem: '', descricao: 'Liquidificador 1000W com 12 velocidades e copo de vidro temperado.', ativo: true, reservadoPor: null },
-      { id: 1004, nome: 'Jogo de Cama King', imagem: '', descricao: 'Jogo de cama 100% algodão egípcio para cama King size.', ativo: true, reservadoPor: null },
-      { id: 1005, nome: 'Smart TV 55"', imagem: '', descricao: 'Smart TV 55 polegadas 4K com acesso às principais plataformas de streaming.', ativo: true, reservadoPor: null },
-      { id: 1006, nome: 'Máquina de Café', imagem: '', descricao: 'Cafeteira espresso com cappuccinatore e reservatório de 1,4L.', ativo: true, reservadoPor: null },
-      { id: 1007, nome: 'Micro-ondas 32L', imagem: '', descricao: 'Micro-ondas 32L com grill e múltiplas funções automáticas.', ativo: true, reservadoPor: null },
-      { id: 1008, nome: 'Jogo de Toalhas', imagem: '', descricao: 'Jogo com 8 peças em algodão egípcio, macias e ultra absorventes.', ativo: false, reservadoPor: null },
-    ];
+    const orcamentoPadrao = []; // Removido — dados reais vêm do Supabase
+    const catalogoPadrao = []; // Removido — dados reais vêm do Supabase
 
     /* ── CONVIDADOS ───────────────────────────────────── */
     let convidados = [];
@@ -1023,11 +1045,11 @@
             : 'badge-pendente';
         return `<tr class="hover:bg-rosa/20 transition-colors">
           <td class="px-4 py-3 text-vinho/40 text-xs">${idx + 1}</td>
-          <td class="px-4 py-3 font-medium text-vinho">${c.nome}</td>
-          <td class="px-4 py-3 text-vinho/70">${c.whats || '—'}</td>
-          <td class="px-4 py-3 text-vinho/70">${c.acomp || '—'}</td>
+          <td class="px-4 py-3 font-medium text-vinho">${esc(c.nome)}</td>
+          <td class="px-4 py-3 text-vinho/70">${esc(c.whats) || '—'}</td>
+          <td class="px-4 py-3 text-vinho/70">${esc(c.acomp) || '—'}</td>
           <td class="px-4 py-3">
-            <span class="px-2 py-0.5 text-xs rounded-full font-medium ${badge}">${c.status}</span>
+            <span class="px-2 py-0.5 text-xs rounded-full font-medium ${badge}">${esc(c.status)}</span>
           </td>
           <td class="px-4 py-3 flex gap-2">
             <button onclick="alterarStatus(${idx})" class="text-xs text-vinho/40 hover:text-marsala transition-colors">Alterar</button>
@@ -1122,7 +1144,7 @@
                class="w-4 h-4 accent-marsala cursor-pointer shrink-0" />
         <label for="chk-${gi}-${ti}"
                class="flex-1 text-sm text-vinho cursor-pointer select-none ${riscado}">
-          ${t.texto}
+          ${esc(t.texto)}
         </label>
         <button onclick="editarTarefa(${gi},${ti})" title="Editar"
                 class="shrink-0 opacity-0 group-hover/t:opacity-100 text-vinho/30 hover:text-marsala transition-all">
@@ -1165,7 +1187,7 @@
           <!-- Cabeçalho do grupo -->
           <div class="flex items-start justify-between gap-3 mb-4">
             <div id="cl-gtitle-${gi}" class="flex items-center gap-2 min-w-0 flex-1">
-              <h3 class="font-serif text-lg text-vinho truncate">${grupo.grupo}</h3>
+              <h3 class="font-serif text-lg text-vinho truncate">${esc(grupo.grupo)}</h3>
               <button onclick="editarGrupo(${gi})" title="Renomear grupo"
                       class="shrink-0 text-vinho/20 hover:text-marsala transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1364,15 +1386,15 @@
       const statusCls = item.status_pagamento === 'Pago' ? 'badge-confirmado'
         : item.status_pagamento === 'Parcial' ? 'badge-escolhido' : 'badge-pendente';
       return `<tr id="orc-row-${i}" class="hover:bg-rosa/20 transition-colors">
-        <td class="px-4 py-3 font-medium text-vinho">${item.fornecedor}</td>
-        <td class="px-4 py-3 text-vinho/60 text-xs">${item.categoria}</td>
+        <td class="px-4 py-3 font-medium text-vinho">${esc(item.fornecedor)}</td>
+        <td class="px-4 py-3 text-vinho/60 text-xs">${esc(item.categoria)}</td>
         <td class="px-4 py-3 text-right text-vinho">${fmtBRL(item.valor_total || 0)}</td>
         <td class="px-4 py-3 text-right text-green-700">${fmtBRL(item.valor_pago || 0)}</td>
         <td class="px-4 py-3 text-right font-medium ${saldoCls}">${fmtBRL(saldo)}</td>
         <td class="px-4 py-3">
-          <span class="px-2 py-0.5 text-xs rounded-full font-medium ${statusCls}">${item.status_pagamento || 'Pendente'}</span>
+          <span class="px-2 py-0.5 text-xs rounded-full font-medium ${statusCls}">${esc(item.status_pagamento) || 'Pendente'}</span>
         </td>
-        <td class="px-4 py-3 text-xs text-vinho/60">${item.vencimento || '—'}</td>
+        <td class="px-4 py-3 text-xs text-vinho/60">${esc(item.vencimento) || '—'}</td>
         <td class="px-4 py-3">
           <div class="flex items-center gap-3">
             <button onclick="editarOrcamento(${i})" title="Editar"
@@ -1398,10 +1420,10 @@
         `<option value="${s}" ${(item.status_pagamento||'Pendente')===s?'selected':''}>${s}</option>`).join('');
       return `<tr id="orc-row-${i}" class="bg-rosa/25 ring-1 ring-inset ring-marsala/20">
         <td class="px-3 py-2">
-          <input id="ei-forn-${i}" value="${item.fornecedor}" class="${inputCls}" placeholder="Fornecedor" />
+          <input id="ei-forn-${i}" value="${esc(item.fornecedor)}" class="${inputCls}" placeholder="Fornecedor" />
         </td>
         <td class="px-3 py-2">
-          <input id="ei-cat-${i}" value="${item.categoria}" class="${inputCls}" placeholder="Categoria" />
+          <input id="ei-cat-${i}" value="${esc(item.categoria)}" class="${inputCls}" placeholder="Categoria" />
         </td>
         <td class="px-3 py-2">
           <input id="ei-vtotal-${i}" value="${item.valor_total||0}" type="number" min="0" step="0.01"
@@ -1466,6 +1488,7 @@
       }
       document.getElementById('orc-row-' + i).outerHTML = linhaOrcamentoView(i);
       atualizarTotaisOrcamento();
+      invalidarCache('financeiro');
     }
 
     /* Atualiza o saldo ao vivo enquanto o usuário digita */
@@ -1511,6 +1534,7 @@
       
       orcamento = await apiGet('financeiro');
       salvar('orcamento', orcamento);
+      invalidarCache('financeiro');
       
       fecharModal('modal-orcamento');
       ['orc-fornecedor', 'orc-categoria', 'orc-valor-total', 'orc-valor-pago', 'orc-vencimento'].forEach(id => document.getElementById(id).value = '');
@@ -1526,6 +1550,7 @@
         }
         orcamento.splice(i, 1);
         salvar('orcamento', orcamento);
+        invalidarCache('financeiro');
         renderizarOrcamento();
       }
     }
@@ -1600,8 +1625,8 @@
         return `<tr class="hover:bg-rosa/10 transition-colors">
           <td class="px-4 py-3">${imgHtml}</td>
           <td class="px-4 py-3 max-w-xs">
-            <p class="font-medium text-sm text-vinho">${item.nome}</p>
-            <p class="text-xs text-vinho/50 mt-0.5 line-clamp-2">${item.descricao || '—'}</p>
+            <p class="font-medium text-sm text-vinho">${esc(item.nome)}</p>
+            <p class="text-xs text-vinho/50 mt-0.5 line-clamp-2">${esc(item.descricao) || '—'}</p>
           </td>
           <td class="px-4 py-3 text-center">
             <label class="relative inline-flex items-center cursor-pointer">
@@ -1644,10 +1669,10 @@
 
       tbody.innerHTML = reservados.map(item => `
         <tr class="hover:bg-rosa/10 transition-colors">
-          <td class="px-4 py-3 font-medium text-sm text-vinho">${item.nome}</td>
-          <td class="px-4 py-3 text-sm text-vinho/80">${item.reservadoPor.nome}</td>
-          <td class="px-4 py-3 text-sm text-vinho/70">${item.reservadoPor.whats || '—'}</td>
-          <td class="px-4 py-3 text-xs text-vinho/50">${item.reservadoPor.data}</td>
+          <td class="px-4 py-3 font-medium text-sm text-vinho">${esc(item.nome)}</td>
+          <td class="px-4 py-3 text-sm text-vinho/80">${esc(item.reservadoPor.nome)}</td>
+          <td class="px-4 py-3 text-sm text-vinho/70">${esc(item.reservadoPor.whats) || '—'}</td>
+          <td class="px-4 py-3 text-xs text-vinho/50">${esc(item.reservadoPor.data)}</td>
           <td class="px-4 py-3">
             <button onclick="liberarReserva(${item.id})"
                     class="text-xs text-vinho/40 hover:text-marsala transition-colors">Liberar</button>
@@ -1859,21 +1884,21 @@
       vazia.classList.add('hidden');
       lista.innerHTML = galeria.map(foto => {
         const preview = foto.url_foto;
-        const anoHtml = foto.ano ? `<span class="font-bold mr-1">${foto.ano}</span>` : '';
+        const anoHtml = foto.ano ? `<span class="font-bold mr-1">${esc(foto.ano)}</span>` : '';
         const legTxt = foto.legenda
-          ? `<p class="text-sm text-vinho font-medium truncate mt-0.5">${anoHtml}${foto.legenda}</p>`
+          ? `<p class="text-sm text-vinho font-medium truncate mt-0.5">${anoHtml}${esc(foto.legenda)}</p>`
           : `<p class="text-xs text-vinho/30 italic mt-0.5">Sem legenda</p>`;
         return `
           <div class="bg-white border border-rosa2/40 rounded-sm p-4 flex items-center gap-4 group">
             <div class="w-16 h-16 rounded-sm overflow-hidden shrink-0 bg-rosa/40 border border-rosa2/40
                         flex items-center justify-center text-2xl">
-              <img src="${preview}" alt="${foto.legenda || 'Foto'}" loading="lazy"
+              <img src="${preview}" alt="${esc(foto.legenda) || 'Foto'}" loading="lazy"
                    class="w-full h-full object-cover"
                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
               <span style="display:none" class="items-center justify-center w-full h-full text-2xl">🖼️</span>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-xs text-vinho/40 font-mono truncate">${foto.url_foto}</p>
+              <p class="text-xs text-vinho/40 font-mono truncate">${esc(foto.url_foto)}</p>
               ${legTxt}
             </div>
             <button onclick="removerFoto(${foto.id})"
@@ -1927,15 +1952,15 @@
           <div class="bg-white border border-rosa2/40 rounded-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3">
             <div class="flex-1 flex flex-col gap-1">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-medium text-sm text-vinho">${r.nome}</span>
-                <span class="px-2 py-0.5 text-xs rounded-full font-medium ${badgeCls}">${r.status}</span>
+                <span class="font-medium text-sm text-vinho">${esc(r.nome)}</span>
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium ${badgeCls}">${esc(r.status)}</span>
               </div>
-              ${r.whatsapp ? `<span class="text-xs text-vinho/50">📱 ${r.whatsapp}</span>` : ''}
+              ${r.whatsapp ? `<span class="text-xs text-vinho/50">📱 ${esc(r.whatsapp)}</span>` : ''}
               <span class="text-xs text-vinho/50">
-                Acompanhantes: <span class="text-vinho/70">${acompTxt}</span>
+                Acompanhantes: <span class="text-vinho/70">${esc(acompTxt)}</span>
                 ${acompArr.length ? `(+${acompArr.length})` : ''}
               </span>
-              <span class="text-xs text-vinho/30">${r.data_envio || ''}</span>
+              <span class="text-xs text-vinho/30">${esc(r.data_envio) || ''}</span>
             </div>
             <div class="flex gap-2 shrink-0">
               <button onclick="importarRSVP(${r.id})"
@@ -2069,17 +2094,16 @@
       if (clResult === false) { await db_seedChecklist(); }
 
       // Financeiro: carrega do Supabase, fallback para localStorage
-      const finData = await apiGet('financeiro');
+      const finData = await fetchComCache('financeiro', 120);
       if (finData && finData.length > 0) {
         orcamento = finData;
       } else {
-        orcamento = carregar('orcamento', orcamentoPadrao);
+        orcamento = carregar('orcamento', []);
       }
       salvar('orcamento', orcamento);
 
       const dadosCatalogo = await db_lerCatalogo();
-      catalogo = dadosCatalogo !== null ? dadosCatalogo : catalogoPadrao.slice();
-      if (dadosCatalogo === null) await db_salvarCatalogo(catalogo);
+      catalogo = (dadosCatalogo && dadosCatalogo.length > 0) ? dadosCatalogo : [];
 
       // Galeria: carrega fotos da tabela historia (rows com url_foto)
       try {
@@ -2129,11 +2153,12 @@
 
     async function salvarConfiguracoes(btn) {
       var cfg = {
+        id: 1,
         noivo: document.getElementById('cfg-noivo').value.trim() || 'Elyabe',
         noiva: document.getElementById('cfg-noiva').value.trim() || 'Raianny',
         data: document.getElementById('cfg-data').value || '2027-09-18',
-        senha_convidados: document.getElementById('cfg-senha').value.trim() || 'Casamento2026',
-        senha_noivos: document.getElementById('cfg-senha-noivos').value.trim() || 'noivos2027',
+        senha_convidados: document.getElementById('cfg-senha').value.trim() || '',
+        senha_noivos: document.getElementById('cfg-senha-noivos').value.trim() || '',
         cor_marsala: document.getElementById('cfg-cor-marsala').value,
         cor_rosa: document.getElementById('cfg-cor-rosa').value,
         pix_chave: document.getElementById('cfg-pix') ? document.getElementById('cfg-pix').value.trim() : '',
@@ -2158,11 +2183,12 @@
       var cfgLocal = {};
       try { cfgLocal = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
       var cfgLimpo = {
+        id: 1,
         noivo: cfgLocal.noivo || 'Elyabe',
         noiva: cfgLocal.noiva || 'Raianny',
         data: cfgLocal.data || '2027-09-18',
-        senha_convidados: cfgLocal.senha_convidados || 'Casamento2026',
-        senha_noivos: cfgLocal.senha_noivos || 'noivos2027',
+        senha_convidados: cfgLocal.senha_convidados || '',
+        senha_noivos: cfgLocal.senha_noivos || '',
         cor_marsala: COR_MARSALA_PADRAO,
         cor_rosa: COR_ROSA_PADRAO,
         pix_chave: cfgLocal.pix_chave || '',
@@ -2227,16 +2253,14 @@
       }
     }
 
-    // Opção 2: Dispara imediatamente ao entrar na página
-    // Opção 1: Configura o robô automático em segundo plano a cada 10 minutos
-    document.addEventListener('DOMContentLoaded', () => {
-      manterBancoAtivo();
-      setInterval(manterBancoAtivo, 10 * 60 * 1000); // 10 minutos
-    });
-
-    // Já autenticado na mesma sessão → inicializa ao carregar
+    // Já autenticado na mesma sessão → inicializa ao carregar + ativa keep-alive
     if (sessionStorage.getItem('autenticado') === '1') {
-      document.addEventListener('DOMContentLoaded', inicializar);
+      document.addEventListener('DOMContentLoaded', () => {
+        inicializar();
+        // Keep-alive: só roda quando autenticado
+        manterBancoAtivo();
+        setInterval(manterBancoAtivo, 10 * 60 * 1000); // 10 minutos
+      });
     }
   </script>
 

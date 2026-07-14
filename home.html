@@ -613,6 +613,17 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0bXVpZmdnamVzaGl1aGNjbnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTcyODEsImV4cCI6MjA5MTY5MzI4MX0.V4cPWLgFQ1Rb57rnAZDfKTsn5GGkRy00dGGU3WWLr4E';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // Sanitização anti-XSS
+    function esc(s) {
+      if (!s) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     // Função Universal para buscar dados (GET)
     async function apiGet(tabela) {
         const { data, error } = await _supabase
@@ -958,13 +969,33 @@
     }
 
     async function salvarReservaPub(id, reserva) {
+      // Tenta reserva atômica via RPC (previne race condition)
+      try {
+        const { data, error } = await _supabase.rpc('reservar_presente', {
+          p_id: id,
+          p_nome: reserva ? (reserva.nome || '') : '',
+          p_whats: reserva ? (reserva.whats || '') : ''
+        });
+        if (!error && data === true) return true;
+        if (!error && data === false) {
+          alert('Este presente acabou de ser reservado por outra pessoa! Atualizando a lista...');
+          await renderizarPresentesSite();
+          fecharModalReserva();
+          return false;
+        }
+      } catch(e) {
+        console.warn('[RPC] reservar_presente não disponível, usando fallback:', e);
+      }
+
+      // Fallback: UPDATE direto (sem proteção de race condition)
       const updateData = {
         reservado_por: reserva ? (reserva.nome || '') : '',
         whats_reserva: reserva ? (reserva.whats || '') : '',
         data_reserva: reserva ? (reserva.data || '') : ''
       };
       const { error } = await _supabase.from('presentes').update(updateData).eq('id', id);
-      if (error) console.error('Erro ao salvar reserva:', error);
+      if (error) { console.error('Erro ao salvar reserva:', error); return false; }
+      return true;
     }
 
     // ── ESTADO ─────────────────────────────────────────
@@ -993,7 +1024,7 @@
             : 'opacity-60'}">
             <div class="relative h-48 bg-rosa/40 flex items-center justify-center overflow-hidden">
               ${imgSrc
-            ? `<img src="${imgSrc}" alt="${item.nome}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x400/F5D0D8/8E3B46?text=Foto+Indisponivel'" />`
+            ? `<img src="${imgSrc}" alt="${esc(item.nome)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x400/F5D0D8/8E3B46?text=Foto+Indisponivel'" />`
             : `<div class="w-full h-full flex items-center justify-center bg-rosa/40"><span class="text-5xl">🎁</span></div>`}
               ${reservado
             ? `<div class="absolute inset-0 bg-vinho/25 flex items-center justify-center">
@@ -1004,8 +1035,8 @@
                    </div>`}
             </div>
             <div class="p-4">
-              <h3 class="font-serif text-base text-vinho">${item.nome}</h3>
-              <p class="text-xs text-vinho/50 mt-1 leading-relaxed line-clamp-2">${item.descricao}</p>
+              <h3 class="font-serif text-base text-vinho">${esc(item.nome)}</h3>
+              <p class="text-xs text-vinho/50 mt-1 leading-relaxed line-clamp-2">${esc(item.descricao)}</p>
             </div>
           </div>`;
       }).join('');
@@ -1040,7 +1071,7 @@
 
       var cfg = {};
       try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
-      const pix = cfg.pix_chave || '054.613.985-02';
+      const pix = cfg.pix_chave || '';
       document.getElementById('mr-pix-chave').textContent = pix;
 
       // Limpa form
@@ -1122,22 +1153,24 @@
       btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
 
       const reserva = { nome, whats, data: new Date().toLocaleString('pt-BR') };
-      await salvarReservaPub(itemAtual.id, reserva);
+      const sucesso = await salvarReservaPub(itemAtual.id, reserva);
 
       btn.disabled = false;
       btn.textContent = 'Segurar para confirmar';
-      document.getElementById('mr-form').classList.add('hidden');
-      document.getElementById('mr-pix').classList.remove('hidden');
-      document.getElementById('mr-badge').classList.remove('hidden');
 
-      renderizarPresentesSite();
+      if (sucesso) {
+        document.getElementById('mr-form').classList.add('hidden');
+        document.getElementById('mr-pix').classList.remove('hidden');
+        document.getElementById('mr-badge').classList.remove('hidden');
+        renderizarPresentesSite();
+      }
     }
 
     // ── COPIAR PIX ─────────────────────────────────────
     function copiarPix() {
       var cfg = {};
       try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
-      const pix = cfg.pix_chave || '054.613.985-02';
+      const pix = cfg.pix_chave || '';
       navigator.clipboard.writeText(pix).then(() => {
         const btn = document.querySelector('[onclick="copiarPix()"]');
         if (!btn) return;
@@ -1224,7 +1257,7 @@
         const legenda = foto.legenda
           ? foto.legenda.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
           : '';
-        const anoHtml = foto.ano ? `<span class="font-bold mr-1">${foto.ano}</span>` : '';
+        const anoHtml = foto.ano ? `<span class="font-bold mr-1">${esc(foto.ano)}</span>` : '';
         const legendaCompleta = (anoHtml + legenda).trim();
         return `
           <div class="galeria-masonry-item">
@@ -1277,7 +1310,7 @@
       set('hero-noivo', noivo);
       set('hero-noiva', noiva);
       var fn = document.getElementById('footer-nomes');
-      if (fn) fn.innerHTML = noivo + ' <span class="italic text-rosa">&amp;</span> ' + noiva;
+      if (fn) fn.innerHTML = esc(noivo) + ' <span class="italic text-rosa">&amp;</span> ' + esc(noiva);
       set('footer-data', fmtPontos(data));
     }
 
@@ -1289,7 +1322,9 @@
 
       // Depois sincroniza com Supabase e reaaplica se houver atualização
       try {
-        var data = await apiGet('configuracoes');
+        // Tenta view segura (sem senhas), fallback para tabela completa
+        var data = await apiGet('configuracoes_publicas');
+        if (!data || data.length === 0) data = await apiGet('configuracoes');
         if (data && data.length > 0) {
           var cfgRemota = data[0];
           localStorage.setItem('configuracoes_site', JSON.stringify(cfgRemota));
