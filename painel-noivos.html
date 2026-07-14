@@ -944,13 +944,7 @@
     function salvar(chave, dados) { localStorage.setItem(chave, JSON.stringify(dados)); }
 
     /* ── DADOS INICIAIS ───────────────────────────────── */
-    const convidadosPadrao = [
-      { nome: 'Ana Lima', whats: '11991110000', acomp: 'Carlos Lima', status: 'Confirmado' },
-      { nome: 'Pedro Souza', whats: '11982220000', acomp: '', status: 'Pendente' },
-      { nome: 'Fernanda Costa', whats: '11973330000', acomp: 'João Costa', status: 'Confirmado' },
-      { nome: 'Marcos Rocha', whats: '11964440000', acomp: '', status: 'Recusado' },
-      { nome: 'Juliana Matos', whats: '11955550000', acomp: 'Rafael Matos', status: 'Pendente' },
-    ];
+    const convidadosPadrao = []; // Sem dados fictícios — convidados vêm do Supabase
 
     const checklistPadrao = [
       {
@@ -1054,32 +1048,61 @@
       renderizarConvidados();
     }
 
-    function alterarStatus(idx) {
+    async function alterarStatus(idx) {
       const ciclo = ['Pendente', 'Confirmado', 'Recusado'];
       const atual = ciclo.indexOf(convidados[idx].status);
       convidados[idx].status = ciclo[(atual + 1) % ciclo.length];
       salvar('convidados', convidados);
       renderizarConvidados();
+      // Sincroniza com o Supabase
+      if (convidados[idx].db_id) {
+        try {
+          await _supabase.from('rsvp').update({ status: convidados[idx].status.toLowerCase() }).eq('id', convidados[idx].db_id);
+        } catch (e) { console.warn('[Supabase] Erro ao atualizar status:', e); }
+      }
     }
 
-    function removerConvidado(idx) {
+    async function removerConvidado(idx) {
       if (confirm('Remover ' + convidados[idx].nome + '?')) {
-        convidados.splice(idx, 1);
+        const removido = convidados.splice(idx, 1)[0];
         salvar('convidados', convidados);
         renderizarConvidados();
+        // Remove do Supabase
+        if (removido.db_id) {
+          try {
+            await _supabase.from('rsvp').delete().eq('id', removido.db_id);
+          } catch (e) { console.warn('[Supabase] Erro ao remover convidado:', e); }
+        }
       }
     }
 
     function abrirModalConvidado() { document.getElementById('modal-convidado').classList.remove('hidden'); }
 
-    function salvarConvidado() {
+    async function salvarConvidado() {
       const nome = document.getElementById('novo-nome').value.trim();
       const whatsRaw = document.getElementById('novo-whats').value.trim();
       const whats = whatsRaw.replace(/\D/g, '');
       const acomp = document.getElementById('novo-acomp').value.trim();
       const status = document.getElementById('novo-status').value;
       if (!nome) return alert('Informe o nome.');
-      convidados.push({ nome, whats, acomp, status });
+
+      // Salva no Supabase primeiro para obter o ID real
+      try {
+        const { data, error } = await _supabase.from('rsvp').insert([{
+          nome: nome,
+          whatsapp: whats,
+          acompanhantes: acomp,
+          status: status.toLowerCase(),
+          data_envio: new Date().toLocaleString('pt-BR')
+        }]).select();
+        if (error) throw error;
+        const dbId = data && data[0] ? data[0].id : null;
+        convidados.push({ nome, whats, acomp, status, db_id: dbId });
+      } catch (e) {
+        console.warn('[Supabase] Erro ao inserir convidado, salvando apenas local:', e);
+        convidados.push({ nome, whats, acomp, status });
+      }
+
       salvar('convidados', convidados);
       fecharModal('modal-convidado');
       ['novo-nome', 'novo-whats', 'novo-acomp'].forEach(id => document.getElementById(id).value = '');
@@ -1929,30 +1952,31 @@
     }
 
     async function importarRSVP(id) {
-      const todos = await apiGet('rsvp');
-      const r = todos.find(item => item.id === id);
-      if (!r) return;
-
-      // Adiciona o convidado principal na lista local do painel
-      convidados.push({ nome: r.nome, whats: r.whatsapp || '', acomp: r.acompanhantes || '', status: r.status });
-
-      // Adiciona cada acompanhante como convidado separado
-      (r.acompanhantes || '').split(', ').filter(Boolean).forEach(nome => {
-        convidados.push({ nome, whats: '', acomp: '', status: r.status });
-      });
-
-      salvar('convidados', convidados);
-
-      // Em vez de deletar, fazemos o UPDATE no banco para persistir
-      if (r.id) {
+      // Atualiza o status no banco para 'confirmado'
+      if (id) {
         try { 
-          const { error } = await _supabase.from('rsvp').update({ status: 'confirmado' }).eq('id', parseInt(r.id));
+          const { error } = await _supabase.from('rsvp').update({ status: 'confirmado' }).eq('id', parseInt(id));
           if (error) console.error(error);
         } catch(e) { console.warn(e); }
       }
 
+      // Recarrega toda a lista de convidados do Supabase para garantir consistência
+      try {
+        const dadosRsvp = await apiGet('rsvp');
+        if (dadosRsvp && dadosRsvp.length > 0) {
+          convidados = dadosRsvp.map(r => ({
+            nome: r.nome || '',
+            whats: r.whatsapp || '',
+            acomp: r.acompanhantes || '',
+            status: (r.status || 'pendente').charAt(0).toUpperCase() + (r.status || 'pendente').slice(1),
+            db_id: r.id
+          }));
+        }
+      } catch(e) { console.warn('[Supabase] Erro ao recarregar convidados:', e); }
+
+      salvar('convidados', convidados);
       renderizarConvidados();
-      carregarInbox(); // Atualiza a lista visualmente, buscando dados reais
+      carregarInbox(); // Atualiza a lista visualmente
     }
 
     async function dispensarRSVP(id) {
@@ -2020,8 +2044,25 @@
 
     /* ── INICIALIZAÇÃO ────────────────────────────── */
     async function inicializar() {
-      // Carrega dados (ou usa os dados de exemplo na primeira vez)
-      convidados = carregar('convidados', convidadosPadrao);
+      // Carrega convidados do Supabase (tabela rsvp) — fonte de verdade
+      try {
+        const dadosRsvp = await apiGet('rsvp');
+        if (dadosRsvp && dadosRsvp.length > 0) {
+          convidados = dadosRsvp.map(r => ({
+            nome: r.nome || '',
+            whats: r.whatsapp || '',
+            acomp: r.acompanhantes || '',
+            status: (r.status || 'pendente').charAt(0).toUpperCase() + (r.status || 'pendente').slice(1),
+            db_id: r.id
+          }));
+        } else {
+          convidados = [];
+        }
+      } catch (e) {
+        console.warn('[Supabase] Falha ao carregar convidados, usando cache local:', e);
+        convidados = carregar('convidados', []);
+      }
+      salvar('convidados', convidados);
       // Checklist: tenta Supabase → se vazio semeia padrão → se erro usa localStorage
       checklist = carregar('checklist', checklistPadrao);
       var clResult = await db_carregarChecklist();
