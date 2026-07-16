@@ -155,12 +155,15 @@
       </div>
 
       <div class="w-full flex flex-col gap-3">
+        <label class="text-xs tracking-widest uppercase text-vinho/60 text-left">E-mail</label>
+        <input id="input-email" type="email" placeholder="seuemail@exemplo.com" class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
+                      focus:outline-none focus:border-marsala transition-colors rounded-sm" />
         <label class="text-xs tracking-widest uppercase text-vinho/60 text-left">Senha de acesso</label>
         <input id="input-senha" type="password" placeholder="••••••••" class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
                       focus:outline-none focus:border-marsala transition-colors rounded-sm" />
-        <p id="erro-senha" class="text-xs text-red-500 text-left hidden">Senha incorreta. Tente novamente.</p>
-        <button onclick="verificarSenha()" class="w-full py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase
-                       hover:bg-marsala2 active:scale-95 transition-all duration-200 rounded-sm">
+        <p id="erro-senha" class="text-xs text-red-500 text-left hidden">E-mail ou senha incorretos. Tente novamente.</p>
+        <button id="btn-entrar" onclick="verificarSenha()" class="w-full py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase
+                       hover:bg-marsala2 active:scale-95 transition-all duration-200 rounded-sm flex items-center justify-center gap-2">
           Entrar
         </button>
       </div>
@@ -923,12 +926,31 @@
     }
 
     /* ── SENHA ─────────────────────────────────────────── */
-    function verificarSenha() {
-      var cfg = {};
-      try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
-      const SENHA_CORRETA = cfg.senha_noivos || '';
-      const val = document.getElementById('input-senha').value;
-      if (val === SENHA_CORRETA) {
+    async function verificarSenha() {
+      const email = document.getElementById('input-email').value.trim();
+      const senha = document.getElementById('input-senha').value;
+      const btn = document.getElementById('btn-entrar');
+      const erro = document.getElementById('erro-senha');
+
+      if (!email || !senha) {
+        erro.textContent = 'Preencha e-mail e senha.';
+        erro.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-spinner" style="display:inline-block"></span>Entrando…';
+      erro.classList.add('hidden');
+
+      try {
+        const { data, error } = await _supabase.auth.signInWithPassword({
+          email: email,
+          password: senha
+        });
+
+        if (error) throw error;
+
+        // Login com sucesso — agora o client usa o JWT 'authenticated'
         sessionStorage.setItem('autenticado', '1');
         localStorage.setItem('logado', 'true');
         localStorage.setItem('admin_logado', 'true');
@@ -938,30 +960,45 @@
         manterBancoAtivo();
         setInterval(manterBancoAtivo, 10 * 60 * 1000);
         inicializar();
-      } else {
-        document.getElementById('erro-senha').classList.remove('hidden');
+      } catch (err) {
+        console.error('[Auth] Erro no login:', err.message);
+        erro.textContent = 'E-mail ou senha incorretos.';
+        erro.classList.remove('hidden');
         document.getElementById('input-senha').value = '';
         document.getElementById('input-senha').focus();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
       }
     }
 
     document.getElementById('input-senha').addEventListener('keydown', e => {
       if (e.key === 'Enter') verificarSenha();
     });
+    document.getElementById('input-email').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('input-senha').focus();
+    });
 
-    function sair() {
+    async function sair() {
+      await _supabase.auth.signOut();
       sessionStorage.removeItem('autenticado');
       localStorage.removeItem('logado');
       localStorage.removeItem('admin_logado');
       location.reload();
     }
 
-    // Mantém sessão ativa enquanto a aba estiver aberta
-    if (sessionStorage.getItem('autenticado') === '1') {
-      document.getElementById('modal-senha').style.display = 'none';
-      document.getElementById('painel').style.display = 'block';
-      window.addEventListener('load', inicializar);
-    }
+    // Restaurar sessão se já autenticado (Supabase mantém o token)
+    (async function restaurarSessao() {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (session) {
+        sessionStorage.setItem('autenticado', '1');
+        document.getElementById('modal-senha').style.display = 'none';
+        document.getElementById('painel').style.display = 'block';
+        manterBancoAtivo();
+        setInterval(manterBancoAtivo, 10 * 60 * 1000);
+        inicializar();
+      }
+    })();
 
     /* ── ABAS ─────────────────────────────────────────── */
     function mudarAba(aba) {
@@ -2253,15 +2290,7 @@
       }
     }
 
-    // Já autenticado na mesma sessão → inicializa ao carregar + ativa keep-alive
-    if (sessionStorage.getItem('autenticado') === '1') {
-      document.addEventListener('DOMContentLoaded', () => {
-        inicializar();
-        // Keep-alive: só roda quando autenticado
-        manterBancoAtivo();
-        setInterval(manterBancoAtivo, 10 * 60 * 1000); // 10 minutos
-      });
-    }
+    // Sessão restaurada automaticamente pela IIFE restaurarSessao() acima
   </script>
 
   <!-- MÁSCARA WHATSAPP -->

@@ -1,0 +1,11 @@
+# Projeto: Site de Casamento Elyabe e Raianny
+- **Stack Tecnológico:** HTML5, CSS (Tailwind via CDN) e JavaScript Vanilla.
+- **Backend/Banco de Dados:** Supabase (SDK via CDN `@supabase/supabase-js@2`).
+- **Arquivos principais:** `index.html` (front-end dos convidados) e `painel-noivos.html` (painel administrativo).
+- **Tabelas Supabase (colunas snake_case):**
+  - `rsvp`: id, nome, whatsapp, status, acompanhantes, data_envio
+  - `presentes`: id, nome, descricao, imagem, reservado_por, whats_reserva, data_reserva, ativo
+  - `configuracoes`: id (=1), noivo, noiva, iniciais, data, senha_convidados, senha_noivos, cor_marsala, cor_rosa, pix_chave, meta_arrecadacao
+  - `historia`: id, texto (row 1 = texto "Nossa História"), url, legenda (fotos do pré-wedding)
+  - `financeiro`: id, fornecedor, categoria, estimado, pago
+- **Regras de Ouro:** Não utilize Node.js, pacotes npm, ou frameworks. O Supabase JS SDK é carregado via CDN. LocalStorage é usado como cache/fallback.
