@@ -832,6 +832,28 @@
           <input id="mr-whats" type="tel" placeholder="WhatsApp (opcional)" class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
                         focus:outline-none focus:border-marsala transition-colors rounded-sm" />
 
+          <!-- Seção de Cotas (visível apenas para presentes com cotas) -->
+          <div id="mr-cota-section" class="hidden flex flex-col gap-3 border border-rosa2/50 rounded-sm p-4 bg-rosa/20">
+            <p class="text-xs tracking-widest uppercase text-marsala font-bold">Contribuição por Cota</p>
+            <div id="mr-cota-progresso" class="flex flex-col gap-1">
+              <div class="flex items-baseline justify-between">
+                <span id="mr-cota-valores" class="text-sm font-semibold text-marsala"></span>
+                <span id="mr-cota-pct" class="text-xs text-vinho/40"></span>
+              </div>
+              <div class="w-full bg-rosa/50 rounded-full h-2 overflow-hidden">
+                <div id="mr-cota-bar" class="h-full rounded-full bg-gradient-to-r from-marsala to-marsala2 transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <p id="mr-cota-restante" class="text-xs text-vinho/40"></p>
+            </div>
+            <div>
+              <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Valor da contribuição (R$) *</label>
+              <input id="mr-valor-cota" type="number" min="10" step="1" placeholder="Ex: 100"
+                class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
+                       focus:outline-none focus:border-marsala transition-colors rounded-sm" />
+              <p class="text-xs text-vinho/35 mt-1">Mínimo: R$ 10,00</p>
+            </div>
+          </div>
+
           <!-- Botão segurar para confirmar -->
           <div class="mt-1">
             <div class="relative rounded-sm overflow-hidden select-none">
@@ -930,7 +952,9 @@
         ativo: raw.ativo !== false,
         reservadoPor: raw.reservado_por
           ? { nome: raw.reservado_por, whats: raw.whats_reserva || '', data: raw.data_reserva || '' }
-          : null
+          : null,
+        valorTotal: raw.valor_total || null,
+        permiteCotas: raw.permite_cotas || false
       };
     }
 
@@ -939,6 +963,21 @@
       const dados = await apiGet('presentes');
       const norm = Array.isArray(dados) ? dados.map(presenteDeApi) : [];
       return norm.filter(i => i.ativo);
+    }
+
+    // Mapa de cotas: { presente_id: total_arrecadado }
+    let _mapaCotas = {};
+    async function carregarCotasPub() {
+      try {
+        const { data } = await _supabase
+          .from('cotas_presentes')
+          .select('presente_id, valor');
+        _mapaCotas = {};
+        (data || []).forEach(c => {
+          _mapaCotas[c.presente_id] = (_mapaCotas[c.presente_id] || 0) + Number(c.valor);
+        });
+      } catch(e) { console.warn('[Supabase] cotas:', e); }
+      return _mapaCotas;
     }
 
     /**
@@ -1007,6 +1046,7 @@
     // ── GRID ───────────────────────────────────────────
     async function renderizarPresentesSite() {
       const catalogo = await carregarCatalogoPub();
+      await carregarCotasPub();
       const grid = document.getElementById('presentes-grid');
       if (!catalogo.length) {
         grid.innerHTML = `<p class="col-span-full text-center text-vinho/40 italic py-16 font-light">
@@ -1016,6 +1056,54 @@
       grid.innerHTML = catalogo.map(item => {
         const reservado = !!item.reservadoPor;
         const imgSrc = resolverUrlPresente(item.imagem);
+
+        // ── Lógica de Cotas ──
+        if (item.permiteCotas && item.valorTotal) {
+          const arrecadado = _mapaCotas[item.id] || 0;
+          const pct = Math.min(100, Math.round((arrecadado / item.valorTotal) * 100));
+          const completo = arrecadado >= item.valorTotal;
+          const restante = Math.max(0, item.valorTotal - arrecadado);
+
+          return `
+            <div onclick="${!completo ? `abrirPresente(${item.id})` : ''}"
+                 class="group bg-rosa/20 border border-rosa2/40 rounded-sm overflow-hidden
+                        transition-all duration-200 ${!completo
+              ? 'cursor-pointer hover:shadow-lg hover:border-marsala/40 hover:-translate-y-1'
+              : 'opacity-70'}">
+              <div class="relative h-48 bg-rosa/40 flex items-center justify-center overflow-hidden">
+                ${imgSrc
+              ? `<img src="${imgSrc}" alt="${esc(item.nome)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x400/F5D0D8/8E3B46?text=Foto+Indisponivel'" />`
+              : `<div class="w-full h-full flex items-center justify-center bg-rosa/40"><span class="text-5xl">🎁</span></div>`}
+                <span class="absolute top-2 right-2 px-2 py-0.5 bg-marsala text-offwhite text-[10px]
+                             tracking-widest uppercase rounded-sm shadow-md">
+                  Cotas
+                </span>
+                ${completo
+              ? `<div class="absolute inset-0 bg-green-900/30 flex items-center justify-center">
+                       <span class="px-3 py-1 bg-green-700 text-white text-xs tracking-widest uppercase rounded-sm shadow-md">✅ Financiado</span>
+                     </div>`
+              : `<div class="absolute inset-0 bg-marsala/0 group-hover:bg-marsala/5 transition-colors flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
+                       <span class="text-xs text-marsala tracking-widest uppercase bg-offwhite/90 px-3 py-1 rounded-sm">Clique para contribuir</span>
+                     </div>`}
+              </div>
+              <div class="p-4">
+                <h3 class="font-serif text-base text-vinho">${esc(item.nome)}</h3>
+                <p class="text-xs text-vinho/50 mt-1 leading-relaxed line-clamp-2">${esc(item.descricao)}</p>
+                <div class="flex items-baseline justify-between mt-3">
+                  <span class="text-sm font-semibold text-marsala">R$ ${arrecadado.toLocaleString('pt-BR')} / R$ ${item.valorTotal.toLocaleString('pt-BR')}</span>
+                  <span class="text-xs text-vinho/40">${pct}%</span>
+                </div>
+                <div class="w-full bg-rosa/50 rounded-full h-2.5 mt-2 overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-1000 ease-out
+                              ${completo ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-marsala to-marsala2'}"
+                       style="width: ${pct}%"></div>
+                </div>
+                ${!completo ? `<p class="text-xs text-vinho/35 mt-2 text-center">Faltam R$ ${restante.toLocaleString('pt-BR')}</p>` : ''}
+              </div>
+            </div>`;
+        }
+
+        // ── Card Normal (reserva única) ──
         return `
           <div onclick="${!reservado ? `abrirPresente(${item.id})` : ''}"
                class="group bg-rosa/20 border border-rosa2/40 rounded-sm overflow-hidden
@@ -1045,10 +1133,17 @@
     // ── MODAL ──────────────────────────────────────────
     async function abrirPresente(id) {
       const catalogo = await carregarCatalogoPub();
+      await carregarCotasPub();
       itemAtual = catalogo.find(i => i.id === id);
       if (!itemAtual) return;
 
       const reservado = !!itemAtual.reservadoPor;
+      const isCota = itemAtual.permiteCotas && itemAtual.valorTotal;
+      const arrecadado = _mapaCotas[id] || 0;
+      const completo = isCota && arrecadado >= itemAtual.valorTotal;
+
+      // Se é cota e já está completo, não abre
+      if (completo) return;
 
       document.getElementById('mr-nome').textContent = itemAtual.nome;
       document.getElementById('mr-desc').textContent = itemAtual.descricao;
@@ -1064,10 +1159,33 @@
         ph.classList.remove('hidden');
       }
 
-      document.getElementById('mr-badge').classList.toggle('hidden', !reservado);
-      document.getElementById('mr-form').classList.toggle('hidden', reservado);
+      // Modo cota vs modo reserva
+      const cotaSection = document.getElementById('mr-cota-section');
+      const formLabel = document.querySelector('#mr-form > p');
+      const holdBtn = document.getElementById('mr-hold-btn');
+
+      if (isCota) {
+        cotaSection.classList.remove('hidden');
+        const restante = Math.max(0, itemAtual.valorTotal - arrecadado);
+        const pct = Math.min(100, Math.round((arrecadado / itemAtual.valorTotal) * 100));
+        document.getElementById('mr-cota-valores').textContent = `R$ ${arrecadado.toLocaleString('pt-BR')} / R$ ${itemAtual.valorTotal.toLocaleString('pt-BR')}`;
+        document.getElementById('mr-cota-pct').textContent = pct + '%';
+        document.getElementById('mr-cota-bar').style.width = pct + '%';
+        document.getElementById('mr-cota-restante').textContent = `Faltam R$ ${restante.toLocaleString('pt-BR')} — Mínimo: R$ 10`;
+        document.getElementById('mr-valor-cota').value = '';
+        document.getElementById('mr-valor-cota').max = restante;
+        if (formLabel) formLabel.textContent = 'Preencha para contribuir';
+        holdBtn.textContent = 'Segurar para contribuir';
+      } else {
+        cotaSection.classList.add('hidden');
+        if (formLabel) formLabel.textContent = 'Preencha para reservar';
+        holdBtn.textContent = 'Segurar para confirmar';
+      }
+
+      document.getElementById('mr-badge').classList.toggle('hidden', !reservado || isCota);
+      document.getElementById('mr-form').classList.toggle('hidden', reservado && !isCota);
       document.getElementById('mr-pix').classList.add('hidden');
-      document.getElementById('mr-reservado').classList.toggle('hidden', !reservado);
+      document.getElementById('mr-reservado').classList.toggle('hidden', !reservado || isCota);
 
       var cfg = {};
       try { cfg = JSON.parse(localStorage.getItem('configuracoes_site') || '{}'); } catch (e) { }
@@ -1082,7 +1200,7 @@
 
       document.getElementById('modal-reserva').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
-      if (!reservado) setTimeout(() => document.getElementById('mr-reservante').focus(), 150);
+      if (!reservado || isCota) setTimeout(() => document.getElementById('mr-reservante').focus(), 150);
     }
 
     function fecharModalReserva() {
@@ -1108,6 +1226,18 @@
         inp.focus();
         setTimeout(() => inp.style.borderColor = '', 1200);
         return;
+      }
+
+      // Validar valor da cota se for modo cota
+      if (itemAtual && itemAtual.permiteCotas && itemAtual.valorTotal) {
+        const valorCota = parseFloat(document.getElementById('mr-valor-cota').value) || 0;
+        if (valorCota < 10) {
+          const inp = document.getElementById('mr-valor-cota');
+          inp.style.borderColor = '#8E3B46';
+          inp.focus();
+          setTimeout(() => inp.style.borderColor = '', 1200);
+          return;
+        }
       }
 
       holdStartTime = performance.now();
@@ -1148,21 +1278,79 @@
       const whats = whatsRaw.replace(/\D/g, '');
       if (!nome) return;
 
+      const isCota = itemAtual.permiteCotas && itemAtual.valorTotal;
+
       const btn = document.getElementById('mr-hold-btn');
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span>Salvando…';
 
-      const reserva = { nome, whats, data: new Date().toLocaleString('pt-BR') };
-      const sucesso = await salvarReservaPub(itemAtual.id, reserva);
+      if (isCota) {
+        // ── Modo Cota ──
+        const valorCota = parseFloat(document.getElementById('mr-valor-cota').value) || 0;
+        if (valorCota < 10) {
+          alert('O valor mínimo da contribuição é R$ 10,00.');
+          btn.disabled = false;
+          btn.textContent = 'Segurar para contribuir';
+          return;
+        }
 
-      btn.disabled = false;
-      btn.textContent = 'Segurar para confirmar';
+        try {
+          const { data, error } = await _supabase.rpc('contribuir_cota', {
+            p_presente_id: itemAtual.id,
+            p_nome: nome,
+            p_whatsapp: whats,
+            p_valor: valorCota
+          });
 
-      if (sucesso) {
-        document.getElementById('mr-form').classList.add('hidden');
-        document.getElementById('mr-pix').classList.remove('hidden');
-        document.getElementById('mr-badge').classList.remove('hidden');
-        renderizarPresentesSite();
+          if (error) throw error;
+
+          const resultado = typeof data === 'string' ? JSON.parse(data) : data;
+          if (!resultado.ok) {
+            alert(resultado.erro || 'Erro ao registrar contribuição.');
+            btn.disabled = false;
+            btn.textContent = 'Segurar para contribuir';
+            await renderizarPresentesSite();
+            return;
+          }
+
+          // Sucesso!
+          btn.disabled = false;
+          btn.textContent = 'Segurar para contribuir';
+          document.getElementById('mr-form').classList.add('hidden');
+          document.getElementById('mr-cota-section').classList.add('hidden');
+          document.getElementById('mr-pix').classList.remove('hidden');
+
+          // Atualiza texto de confirmação
+          const pixInfo = document.querySelector('#mr-pix .font-serif');
+          if (pixInfo) pixInfo.textContent = `Contribuição de R$ ${valorCota.toLocaleString('pt-BR')} registrada!`;
+
+          if (resultado.completo) {
+            document.getElementById('mr-badge').classList.remove('hidden');
+            document.getElementById('mr-badge').textContent = 'Financiado!';
+            document.getElementById('mr-badge').classList.replace('bg-vinho', 'bg-green-700');
+          }
+
+          renderizarPresentesSite();
+        } catch(e) {
+          console.error('[RPC] contribuir_cota erro:', e);
+          alert('Erro ao registrar contribuição. Tente novamente.');
+          btn.disabled = false;
+          btn.textContent = 'Segurar para contribuir';
+        }
+      } else {
+        // ── Modo Reserva Normal ──
+        const reserva = { nome, whats, data: new Date().toLocaleString('pt-BR') };
+        const sucesso = await salvarReservaPub(itemAtual.id, reserva);
+
+        btn.disabled = false;
+        btn.textContent = 'Segurar para confirmar';
+
+        if (sucesso) {
+          document.getElementById('mr-form').classList.add('hidden');
+          document.getElementById('mr-pix').classList.remove('hidden');
+          document.getElementById('mr-badge').classList.remove('hidden');
+          renderizarPresentesSite();
+        }
       }
     }
 

@@ -463,6 +463,7 @@
                 <th class="px-4 py-3 text-left">Nome / Descrição</th>
                 <th class="px-4 py-3 text-center w-24">Ativo</th>
                 <th class="px-4 py-3 text-left w-28">Status</th>
+                <th class="px-4 py-3 text-left w-32">Tipo</th>
                 <th class="px-4 py-3 text-left w-36">Ações</th>
               </tr>
             </thead>
@@ -825,6 +826,29 @@
                       after:h-5 after:w-5 after:transition-all after:duration-200 peer-checked:after:translate-x-5">
           </div>
         </label>
+      </div>
+
+      <!-- Cotas / Financiamento Coletivo -->
+      <div class="border-t border-rosa2/30 pt-4 mt-2">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <p class="text-xs tracking-widest uppercase text-vinho/60">Aceita Cotas (Financiamento)</p>
+            <p class="text-xs text-vinho/40 mt-0.5">Convidados contribuem com valores parciais via PIX</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input id="item-permite-cotas" type="checkbox" class="sr-only peer" onchange="toggleCampoValorTotal()">
+            <div class="w-11 h-6 bg-rosa2 peer-checked:bg-marsala rounded-full transition-colors duration-200 relative
+                        after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
+                        after:h-5 after:w-5 after:transition-all after:duration-200 peer-checked:after:translate-x-5">
+            </div>
+          </label>
+        </div>
+        <div id="item-valor-total-wrap" class="hidden">
+          <label class="block text-xs tracking-widest uppercase text-vinho/60 mb-1">Valor Total do Presente (R$) *</label>
+          <input id="item-valor-total" type="number" min="10" step="0.01" placeholder="Ex: 3000.00"
+            class="w-full border border-rosa2 bg-white px-4 py-2 text-sm text-vinho focus:outline-none focus:border-marsala rounded-sm" />
+          <p class="text-xs text-vinho/40 mt-1">Valor total que os convidados precisam arrecadar juntos</p>
+        </div>
       </div>
 
       <div class="flex gap-3 mt-2">
@@ -1605,7 +1629,9 @@
         reservado_por: item.reservadoPor ? (item.reservadoPor.nome || '') : '',
         whats_reserva: item.reservadoPor ? (item.reservadoPor.whats || '') : '',
         data_reserva: item.reservadoPor ? (item.reservadoPor.data || '') : '',
-        ativo: item.ativo !== false
+        ativo: item.ativo !== false,
+        valor_total: item.valorTotal || null,
+        permite_cotas: item.permiteCotas || false
       };
     }
     function presenteDeApi(raw) {
@@ -1617,7 +1643,9 @@
         ativo: raw.ativo !== false,
         reservadoPor: raw.reservado_por
           ? { nome: raw.reservado_por, whats: raw.whats_reserva || '', data: raw.data_reserva || '' }
-          : null
+          : null,
+        valorTotal: raw.valor_total || null,
+        permiteCotas: raw.permite_cotas || false
       };
     }
 
@@ -1679,6 +1707,14 @@
             </span>
           </td>
           <td class="px-4 py-3">
+            ${item.permiteCotas
+              ? `<div>
+                   <span class="px-2 py-0.5 text-xs rounded-full font-medium bg-amber-50 text-amber-700">Cotas</span>
+                   <p class="text-xs text-vinho/40 mt-1">${fmtBRL(item.valorTotal || 0)}</p>
+                 </div>`
+              : `<span class="text-xs text-vinho/30">Reserva única</span>`}
+          </td>
+          <td class="px-4 py-3">
             <div class="flex items-center gap-3">
               <button onclick="abrirModalItem(${item.id})"
                       class="flex items-center gap-1 text-xs text-vinho/40 hover:text-marsala transition-colors">
@@ -1693,28 +1729,103 @@
       }).join('');
     }
 
-    function renderizarRecebidos() {
+    async function renderizarRecebidos() {
       const reservados = catalogo.filter(i => i.reservadoPor);
+      const cotasItens = catalogo.filter(i => i.permiteCotas);
       const tbody = document.getElementById('tabela-recebidos');
-      document.getElementById('receb-total').textContent = reservados.length;
 
-      if (!reservados.length) {
+      // Carregar cotas do banco
+      let cotasData = [];
+      try {
+        const { data } = await _supabase.from('cotas_presentes').select('*').order('data', { ascending: false });
+        cotasData = data || [];
+      } catch(e) { console.warn('[Supabase] cotas_presentes:', e); }
+
+      const totalRecebidos = reservados.filter(i => !i.permiteCotas).length + cotasItens.filter(i => {
+        const soma = cotasData.filter(c => c.presente_id === i.id).reduce((s, c) => s + Number(c.valor), 0);
+        return soma > 0;
+      }).length;
+      document.getElementById('receb-total').textContent = totalRecebidos;
+
+      if (!reservados.length && !cotasData.length) {
         tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-10 text-center text-vinho/40 italic text-sm">
-          Nenhum presente reservado ainda.</td></tr>`;
+          Nenhum presente reservado ou com contribuições ainda.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = reservados.map(item => `
-        <tr class="hover:bg-rosa/10 transition-colors">
-          <td class="px-4 py-3 font-medium text-sm text-vinho">${esc(item.nome)}</td>
-          <td class="px-4 py-3 text-sm text-vinho/80">${esc(item.reservadoPor.nome)}</td>
-          <td class="px-4 py-3 text-sm text-vinho/70">${esc(item.reservadoPor.whats) || '—'}</td>
-          <td class="px-4 py-3 text-xs text-vinho/50">${esc(item.reservadoPor.data)}</td>
-          <td class="px-4 py-3">
-            <button onclick="liberarReserva(${item.id})"
-                    class="text-xs text-vinho/40 hover:text-marsala transition-colors">Liberar</button>
-          </td>
-        </tr>`).join('');
+      let html = '';
+
+      // Presentes normais reservados
+      const normais = reservados.filter(i => !i.permiteCotas);
+      normais.forEach(item => {
+        html += `
+          <tr class="hover:bg-rosa/10 transition-colors">
+            <td class="px-4 py-3 font-medium text-sm text-vinho">${esc(item.nome)}</td>
+            <td class="px-4 py-3 text-sm text-vinho/80">${esc(item.reservadoPor.nome)}</td>
+            <td class="px-4 py-3 text-sm text-vinho/70">${esc(item.reservadoPor.whats) || '—'}</td>
+            <td class="px-4 py-3 text-xs text-vinho/50">${esc(item.reservadoPor.data)}</td>
+            <td class="px-4 py-3">
+              <button onclick="liberarReserva(${item.id})"
+                      class="text-xs text-vinho/40 hover:text-marsala transition-colors">Liberar</button>
+            </td>
+          </tr>`;
+      });
+
+      // Presentes com cotas que têm contribuições
+      cotasItens.forEach(item => {
+        const cotasItem = cotasData.filter(c => c.presente_id === item.id);
+        if (!cotasItem.length) return;
+        const somaCotas = cotasItem.reduce((s, c) => s + Number(c.valor), 0);
+        const pct = item.valorTotal ? Math.min(100, Math.round((somaCotas / item.valorTotal) * 100)) : 0;
+        const completo = somaCotas >= (item.valorTotal || 0);
+
+        html += `
+          <tr class="bg-amber-50/30 border-l-4 border-l-amber-400">
+            <td class="px-4 py-3" colspan="5">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-sm text-vinho">${esc(item.nome)}</span>
+                  <span class="px-2 py-0.5 text-xs rounded-full font-medium ${completo ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
+                    ${completo ? '✅ Financiado' : 'Em andamento'}
+                  </span>
+                </div>
+                <span class="text-sm font-semibold text-marsala">${fmtBRL(somaCotas)} / ${fmtBRL(item.valorTotal || 0)} (${pct}%)</span>
+              </div>
+              <div class="w-full bg-rosa2/30 rounded-full h-2 mb-3 overflow-hidden">
+                <div class="h-full rounded-full bg-gradient-to-r ${completo ? 'from-green-500 to-green-400' : 'from-marsala to-marsala2'} transition-all duration-500" style="width: ${pct}%"></div>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead class="text-vinho/40 uppercase tracking-wider">
+                    <tr>
+                      <th class="text-left py-1 pr-4">Contribuinte</th>
+                      <th class="text-left py-1 pr-4">WhatsApp</th>
+                      <th class="text-right py-1 pr-4">Valor</th>
+                      <th class="text-left py-1 pr-4">Data</th>
+                      <th class="text-left py-1">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-vinho/70">
+                    ${cotasItem.map(c => `
+                      <tr class="border-t border-rosa2/20">
+                        <td class="py-1.5 pr-4 font-medium">${esc(c.nome)}</td>
+                        <td class="py-1.5 pr-4">${esc(c.whatsapp) || '—'}</td>
+                        <td class="py-1.5 pr-4 text-right font-medium text-marsala">${fmtBRL(c.valor)}</td>
+                        <td class="py-1.5 pr-4">${c.data ? new Date(c.data).toLocaleString('pt-BR') : '—'}</td>
+                        <td class="py-1.5">
+                          <button onclick="removerCota(${c.id}, ${item.id})"
+                                  class="text-vinho/30 hover:text-red-500 transition-colors">Excluir</button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>`;
+      });
+
+      tbody.innerHTML = html;
     }
 
     function abrirModalItem(id) {
@@ -1725,6 +1836,9 @@
       document.getElementById('item-imagem').value = item?.imagem || '';
       document.getElementById('item-descricao').value = item?.descricao || '';
       document.getElementById('item-ativo').checked = item ? item.ativo : true;
+      document.getElementById('item-permite-cotas').checked = item ? (item.permiteCotas || false) : false;
+      document.getElementById('item-valor-total').value = item?.valorTotal || '';
+      toggleCampoValorTotal();
       fecharModal('modal-item'); // reset hidden state then show
       document.getElementById('modal-item').classList.remove('hidden');
       document.getElementById('item-nome').focus();
@@ -1735,6 +1849,13 @@
       const imagemRaw = document.getElementById('item-imagem').value.trim();
       const descricao = document.getElementById('item-descricao').value.trim();
       const ativo = document.getElementById('item-ativo').checked;
+      const permiteCotas = document.getElementById('item-permite-cotas').checked;
+      const valorTotal = permiteCotas ? (parseFloat(document.getElementById('item-valor-total').value) || 0) : null;
+      if (permiteCotas && (!valorTotal || valorTotal < 10)) {
+        alert('Informe o valor total do presente (mínimo R$ 10).');
+        document.getElementById('item-valor-total').focus();
+        return;
+      }
       if (!nome) { document.getElementById('item-nome').focus(); return; }
 
       // Drive → thumbnail; link externo → mantém intacto
@@ -1747,20 +1868,20 @@
       if (editandoId) {
         const idx = catalogo.findIndex(i => i.id === editandoId);
         if (idx > -1) {
-          catalogo[idx] = { ...catalogo[idx], nome, imagem, descricao, ativo };
+          catalogo[idx] = { ...catalogo[idx], nome, imagem, descricao, ativo, permiteCotas, valorTotal };
           const row = presenteParaApi(catalogo[idx]);
           await _supabase.from('presentes').update(row).eq('id', editandoId);
         }
       } else {
-        const row = { nome, descricao, imagem, ativo, reservado_por: '', whats_reserva: '', data_reserva: '' };
+        const row = { nome, descricao, imagem, ativo, reservado_por: '', whats_reserva: '', data_reserva: '', permite_cotas: permiteCotas, valor_total: valorTotal };
         try {
           const resp = await _supabase.from('presentes').insert(row).select();
           if (resp.error) throw resp.error;
           const newId = resp.data && resp.data[0] ? resp.data[0].id : Date.now();
-          catalogo.push({ id: newId, nome, imagem, descricao, ativo, reservadoPor: null });
+          catalogo.push({ id: newId, nome, imagem, descricao, ativo, reservadoPor: null, permiteCotas, valorTotal });
         } catch(e) {
           console.warn('[Supabase] insert presente falhou:', e);
-          catalogo.push({ id: Date.now(), nome, imagem, descricao, ativo, reservadoPor: null });
+          catalogo.push({ id: Date.now(), nome, imagem, descricao, ativo, reservadoPor: null, permiteCotas, valorTotal });
         }
       }
 
@@ -1802,6 +1923,29 @@
       if (error) console.error('Erro ao liberar reserva:', error);
       renderizarGerItens();
       renderizarRecebidos();
+    }
+
+    function toggleCampoValorTotal() {
+      const checked = document.getElementById('item-permite-cotas').checked;
+      document.getElementById('item-valor-total-wrap').classList.toggle('hidden', !checked);
+    }
+
+    async function removerCota(cotaId, presenteId) {
+      if (!confirm('Remover esta contribuição?')) return;
+      try {
+        await _supabase.from('cotas_presentes').delete().eq('id', cotaId);
+        // Verificar se o presente ainda está completo
+        const { data } = await _supabase.from('cotas_presentes').select('valor').eq('presente_id', presenteId);
+        const soma = (data || []).reduce((s, c) => s + Number(c.valor), 0);
+        const item = catalogo.find(i => i.id === presenteId);
+        if (item && soma < (item.valorTotal || 0) && item.reservadoPor) {
+          // Desfaz o status de financiado
+          await _supabase.from('presentes').update({ reservado_por: '', whats_reserva: '', data_reserva: '' }).eq('id', presenteId);
+          item.reservadoPor = null;
+        }
+      } catch(e) { console.warn('[Supabase] remover cota:', e); }
+      renderizarRecebidos();
+      renderizarGerItens();
     }
 
     /* ── GALERIA DE FOTOS ────────────────────────────── */
