@@ -832,9 +832,9 @@
           <input id="mr-whats" type="tel" placeholder="WhatsApp (opcional)" class="w-full border border-rosa2 bg-white px-4 py-3 text-sm text-vinho placeholder:text-vinho/30
                         focus:outline-none focus:border-marsala transition-colors rounded-sm" />
 
-          <!-- Seção de Cotas (visível apenas para presentes com cotas) -->
+          <!-- Seção de Contribuição (visível apenas para presentes com contribuição coletiva) -->
           <div id="mr-cota-section" class="hidden flex flex-col gap-3 border border-rosa2/50 rounded-sm p-4 bg-rosa/20">
-            <p class="text-xs tracking-widest uppercase text-marsala font-bold">Contribuição por Cota</p>
+            <p class="text-xs tracking-widest uppercase text-marsala font-bold">Contribuir com um valor</p>
             <div id="mr-cota-progresso" class="flex flex-col gap-1">
               <div class="flex items-baseline justify-between">
                 <span id="mr-cota-valores" class="text-sm font-semibold text-marsala"></span>
@@ -911,6 +911,13 @@
               </a>
             </div>
           </div>
+
+          <!-- Botão Concluir — fecha o modal e atualiza a lista -->
+          <button onclick="fecharModalReservaComAtualizacao()"
+            class="w-full py-3 bg-marsala text-offwhite text-sm tracking-[0.2em] uppercase font-sans
+                   rounded-sm hover:bg-marsala2 transition-colors shadow-md mt-1">
+            Concluir
+          </button>
         </div>
 
         <!-- Já reservado por outra pessoa -->
@@ -1076,14 +1083,14 @@
               : `<div class="w-full h-full flex items-center justify-center bg-rosa/40"><span class="text-5xl">🎁</span></div>`}
                 <span class="absolute top-2 right-2 px-2 py-0.5 bg-marsala text-offwhite text-[10px]
                              tracking-widest uppercase rounded-sm shadow-md">
-                  Cotas
+                  Contribuição
                 </span>
                 ${completo
               ? `<div class="absolute inset-0 bg-green-900/30 flex items-center justify-center">
-                       <span class="px-3 py-1 bg-green-700 text-white text-xs tracking-widest uppercase rounded-sm shadow-md">✅ Financiado</span>
+                       <span class="px-3 py-1 bg-green-700 text-white text-xs tracking-widest uppercase rounded-sm shadow-md">✅ Presenteado</span>
                      </div>`
               : `<div class="absolute inset-0 bg-marsala/0 group-hover:bg-marsala/5 transition-colors flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
-                       <span class="text-xs text-marsala tracking-widest uppercase bg-offwhite/90 px-3 py-1 rounded-sm">Clique para contribuir</span>
+                       <span class="text-xs text-marsala tracking-widest uppercase bg-offwhite/90 px-3 py-1 rounded-sm">Contribuir com valor</span>
                      </div>`}
               </div>
               <div class="p-4">
@@ -1171,10 +1178,10 @@
         document.getElementById('mr-cota-valores').textContent = `R$ ${arrecadado.toLocaleString('pt-BR')} / R$ ${itemAtual.valorTotal.toLocaleString('pt-BR')}`;
         document.getElementById('mr-cota-pct').textContent = pct + '%';
         document.getElementById('mr-cota-bar').style.width = pct + '%';
-        document.getElementById('mr-cota-restante').textContent = `Faltam R$ ${restante.toLocaleString('pt-BR')} — Mínimo: R$ 10`;
+        document.getElementById('mr-cota-restante').textContent = `Faltam R$ ${restante.toLocaleString('pt-BR')} para presentear`;
         document.getElementById('mr-valor-cota').value = '';
         document.getElementById('mr-valor-cota').max = restante;
-        if (formLabel) formLabel.textContent = 'Preencha para contribuir';
+        if (formLabel) formLabel.textContent = 'Preencha para presentear';
         holdBtn.textContent = 'Segurar para contribuir';
       } else {
         cotaSection.classList.add('hidden');
@@ -1203,16 +1210,33 @@
       if (!reservado || isCota) setTimeout(() => document.getElementById('mr-reservante').focus(), 150);
     }
 
+    // Flag que indica se houve reserva/contribuição bem-sucedida nesta sessão do modal
+    let _reservaSucesso = false;
+
     function fecharModalReserva() {
       cancelarHold();
       document.getElementById('modal-reserva').classList.add('hidden');
       document.body.style.overflow = '';
       itemAtual = null;
+      // Se houve reserva bem-sucedida, atualiza a lista ao fechar
+      if (_reservaSucesso) {
+        _reservaSucesso = false;
+        renderizarPresentesSite();
+      }
     }
 
-    // Fecha clicando fora
+    // Chamada pelo botão "Concluir" dentro da seção PIX
+    function fecharModalReservaComAtualizacao() {
+      _reservaSucesso = true;
+      fecharModalReserva();
+    }
+
+    // Fecha clicando fora — mas NÃO se o PIX estiver visível (o usuário deve usar "Concluir")
     document.getElementById('modal-reserva').addEventListener('click', function (e) {
-      if (e.target === this) fecharModalReserva();
+      if (e.target === this) {
+        const pixVisivel = !document.getElementById('mr-pix').classList.contains('hidden');
+        if (!pixVisivel) fecharModalReserva();
+      }
     });
 
     // ── BOTÃO SEGURAR ──────────────────────────────────
@@ -1326,11 +1350,12 @@
 
           if (resultado.completo) {
             document.getElementById('mr-badge').classList.remove('hidden');
-            document.getElementById('mr-badge').textContent = 'Financiado!';
+            document.getElementById('mr-badge').textContent = 'Presenteado!';
             document.getElementById('mr-badge').classList.replace('bg-vinho', 'bg-green-700');
           }
 
-          renderizarPresentesSite();
+          // Marca sucesso — a lista será atualizada quando o usuário fechar o modal
+          _reservaSucesso = true;
         } catch(e) {
           console.error('[RPC] contribuir_cota erro:', e);
           alert('Erro ao registrar contribuição. Tente novamente.');
@@ -1349,7 +1374,8 @@
           document.getElementById('mr-form').classList.add('hidden');
           document.getElementById('mr-pix').classList.remove('hidden');
           document.getElementById('mr-badge').classList.remove('hidden');
-          renderizarPresentesSite();
+          // Marca sucesso — a lista será atualizada quando o usuário fechar o modal
+          _reservaSucesso = true;
         }
       }
     }

@@ -828,11 +828,11 @@
         </label>
       </div>
 
-      <!-- Cotas / Financiamento Coletivo -->
+      <!-- Contribuição Coletiva -->
       <div class="border-t border-rosa2/30 pt-4 mt-2">
         <div class="flex items-center justify-between mb-3">
           <div>
-            <p class="text-xs tracking-widest uppercase text-vinho/60">Aceita Cotas (Financiamento)</p>
+            <p class="text-xs tracking-widest uppercase text-vinho/60">Contribuição Coletiva</p>
             <p class="text-xs text-vinho/40 mt-0.5">Convidados contribuem com valores parciais via PIX</p>
           </div>
           <label class="relative inline-flex items-center cursor-pointer">
@@ -1709,7 +1709,7 @@
           <td class="px-4 py-3">
             ${item.permiteCotas
               ? `<div>
-                   <span class="px-2 py-0.5 text-xs rounded-full font-medium bg-amber-50 text-amber-700">Cotas</span>
+                   <span class="px-2 py-0.5 text-xs rounded-full font-medium bg-amber-50 text-amber-700">Contribuição</span>
                    <p class="text-xs text-vinho/40 mt-1">${fmtBRL(item.valorTotal || 0)}</p>
                  </div>`
               : `<span class="text-xs text-vinho/30">Reserva única</span>`}
@@ -1786,7 +1786,7 @@
                 <div class="flex items-center gap-2">
                   <span class="font-medium text-sm text-vinho">${esc(item.nome)}</span>
                   <span class="px-2 py-0.5 text-xs rounded-full font-medium ${completo ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
-                    ${completo ? '✅ Financiado' : 'Em andamento'}
+                    ${completo ? '✅ Presenteado' : 'Em andamento'}
                   </span>
                 </div>
                 <span class="text-sm font-semibold text-marsala">${fmtBRL(somaCotas)} / ${fmtBRL(item.valorTotal || 0)} (${pct}%)</span>
@@ -1939,7 +1939,7 @@
         const soma = (data || []).reduce((s, c) => s + Number(c.valor), 0);
         const item = catalogo.find(i => i.id === presenteId);
         if (item && soma < (item.valorTotal || 0) && item.reservadoPor) {
-          // Desfaz o status de financiado
+          // Desfaz o status de presenteado
           await _supabase.from('presentes').update({ reservado_por: '', whats_reserva: '', data_reserva: '' }).eq('id', presenteId);
           item.reservadoPor = null;
         }
